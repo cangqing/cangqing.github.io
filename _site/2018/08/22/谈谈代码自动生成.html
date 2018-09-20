@@ -1,0 +1,397 @@
+<h4 id="由lombok说开去">由Lombok说开去</h4>
+<p>众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。</p>
+
+<p>本文不打算深入讲解Lombok的详细用法，仅做入门展示特性。</p>
+<h5 id="生成gettersetter方法">生成getter，setter方法</h5>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@Data
+public class User { 
+    private String id;
+    private String name; 
+    private Integer age; 
+    
+} 
+public static void main(String[] args){ 
+ User user = new User();
+    user.setId("1");
+    user.setName("name");
+    user.setAge(1);
+}
+</code></pre></div></div>
+<p>相比常规的书写java bean，是不是清爽很多？就凭借这一点，笔者就开始试用了。如果在类加上标注@Accessors(chain = true) 还可以支持链式调用。</p>
+<h5 id="代码清场">代码清场</h5>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public static void main(String[] args) throws IOException {  
+    @Cleanup
+    InputStream in = new FileInputStream(args[0]);  
+    @Cleanup 
+    OutputStream out = new FileOutputStream(args[1]);  
+    byte[] b = new byte[10000];  
+    while (true) {  
+      int r = in.read(b);  
+      if (r == -1) break;  
+      out.write(b, 0, r);  
+    }  
+  }  
+</code></pre></div></div>
+<p>@Cleanup 之于代码的作用类似于垃圾回收之于jvm运行时，干的是幕后清场的重要琐事。如果觉得作用不够明显，可以看下常规的书写代码有多烦。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public static void main(String[] args) throws IOException {  
+    InputStream in = new FileInputStream(args[0]);  
+    try {  
+      OutputStream out = new FileOutputStream(args[1]);  
+      try {  
+        byte[] b = new byte[10000];  
+        while (true) {  
+          int r = in.read(b);  
+          if (r == -1) break;  
+          out.write(b, 0, r);  
+        }  
+      } finally {  
+        if (out != null) {  
+          out.close();  
+        }  
+      }  
+    } finally {  
+      if (in != null) {  
+        in.close();  
+      }  
+    }  
+  }  
+</code></pre></div></div>
+<p>值得注意的是：如果你的代码中出现了异常，那么会触发cleanup方法抛出异常，导致把原始异常吞掉，但是如果说你是在调用close方法的时候出了异常，那么Cleanup这个annotation是不会把异常吞掉的。 官方暂时也没法解决。</p>
+<h5 id="公共方法实现">公共方法实现</h5>
+<p>主要包含以下方法</p>
+
+<ul>
+  <li>@ToString，</li>
+  <li>@EqualsAndHashCode，</li>
+  <li>@NoArgsConstructor,</li>
+  <li>@RequiredArgsConstructor</li>
+  <li>@AllArgsConstructor
+```
+import lombok.ToString;</li>
+</ul>
+
+<p>@ToString(exclude=”id”)
+public class ToStringExample {
+  private static final int STATIC_VAR = 10;
+  private String name;
+  private Shape shape = new Square(5, 10);
+  private String[] tags;
+  private int id;</p>
+
+<p>public String getName() {
+    return this.getName();
+  }</p>
+
+<p>@ToString(callSuper=true, includeFieldNames=true)
+  public static class Square extends Shape {
+    private final int width, height;</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public Square(int width, int height) {
+  this.width = width;
+  this.height = height;
+}   } } ``` 了解了Lombok的富有魔性的语法，也知道了她的另一个弊端：强大的同时也给调试带来了障碍。现在我们关注她的另一面：由于对现有标准的不遵守，给我们编码规范带来的改变。标注注解在Lombok中不仅仅起着元数据的作用，更是起到了命令驱动编程的作用,还有一点就是提供了动态代理的替代方案。接下来我们把重点放在探究其工作原理。 #### Lombok工作原理 ##### 了解下 Annotation Annotation 是JDk提供用来为程序元素提供设置元数据的方法。所谓元数据就是描述数据的数据，在大数据时代，这个概念相信听到得不要太多。所谓程序元素，包括修饰包、类、构造器、方法、成员变量、参数、局部变量等。元数据的信息被存储在Annotation的“name=value”中。 注解也有元注解的概念，即注解其他注解的注解，jdk提供的4个基本的元注解分别是 - @Target 标明注解的修饰目标 - @Retention 标明注解的生命周期 - @Documented 表明制作javadoc时，是否将注解信息加入文档 - @Inherited 允许子类继承父类的注解 -  定义一个注解： ``` @Target({ElementType.TYPE}) @Retention(RetentionPolicy.SOURCE) public @interface AutoCoding {
+</code></pre></div></div>
+
+<p>}</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+@Target 只有一个value属性，类型为枚举类型ElementType。ElementType 声明如下：
+</code></pre></div></div>
+<p>/* @author  Joshua Bloch</p>
+<ul>
+  <li>@since 1.5</li>
+  <li>@jls 9.6.4.1 @Target</li>
+  <li>
+    <p>@jls 4.1 The Kinds of Types and Values
+ */
+public enum ElementType {
+ /** Class, interface (including annotation type), or enum declaration */
+ TYPE,</p>
+
+    <p>/** Field declaration (includes enum constants) */
+ FIELD,</p>
+
+    <p>/** Method declaration */
+ METHOD,</p>
+
+    <p>/** Formal parameter declaration */
+ PARAMETER,</p>
+
+    <p>/** Constructor declaration */
+ CONSTRUCTOR,</p>
+
+    <p>/** Local variable declaration */
+ LOCAL_VARIABLE,</p>
+
+    <p>/** Annotation type declaration */
+ ANNOTATION_TYPE,</p>
+
+    <p>/** Package declaration */
+ PACKAGE,</p>
+
+    <p>/**</p>
+    <ul>
+      <li>Type parameter declaration
+  *</li>
+      <li>@since 1.8
+  */
+ TYPE_PARAMETER,</li>
+    </ul>
+
+    <p>/**</p>
+    <ul>
+      <li>Use of a type
+  *</li>
+      <li>@since 1.8
+  */
+ TYPE_USE
+}
+        <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> @Retention 指明该注解的生命周期，注解的值是 enum 类型的 RetentionPolicy，包括以下几种情况：
+</code></pre></div>        </div>
+        <p>public enum RetentionPolicy {
+ /**</p>
+      </li>
+      <li>注解只保留在源文件，当Java文件编译成class文件的时候，注解被遗弃.</li>
+      <li>这意味着：Annotation仅存在于编译器处理期间，编译器处理完之后，该Annotation就没用了
+  */
+ SOURCE,</li>
+    </ul>
+
+    <p>/**</p>
+    <ul>
+      <li>注解被保留到class文件，但jvm加载class文件时候被遗弃，这是默认的生命周期.
+  */
+ CLASS,</li>
+    </ul>
+
+    <p>/**</p>
+    <ul>
+      <li>注解不仅被保存到class文件中，jvm加载class文件之后，仍然存在，</li>
+      <li>保存到class对象中，可以通过反射来获取
+  */
+ RUNTIME</li>
+    </ul>
+  </li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#### Lombok 处理流程
+![flow](https://ask.qcloudimg.com/http-save/yehe-1177371/vvmecue5dt.png?imageView2/2/w/1620)
+，jdk7及之后采用了 [JSR269API](http://openjdk.java.net/jeps/117）
+Lombok本质上就是一个实现了“JSR 269 API”的程序。在使用javac的过程中，它产生作用的具体流程如下：
+
+1. javac对源代码进行分析，生成了一棵抽象语法树（AST）
+2. 运行过程中调用实现了“JSR 269 API”的Lombok程序
+3. 对第一步骤得到的AST进行处理，找到@Data注解所在类对应的语法树（AST），然后修改该语法树（AST），增加getter和setter方法定义的相应树节点
+4. javac使用修改后的抽象语法树（AST）生成字节码文件，即给class增加新的节点（代码块）
+##### Annotation处理
+jdk7之前访问和处理Annotation的工具统称APT（ Annotation Processing Tool），其作用如下：
+- APT是一种处理注释的工具,它对源代码文件进行检测，并找出源文件中所包含的Annotation信息，然后针对Annotation信息进行额外的处理。
+- APT处理器在处理Annotation时可以根据源文件中的Annotation生成额外的源文件和其它的文件(文件具体内容由Annotation处理器的编写者决定),APT还会编译生成的源文件和原来的源文件，将它们一起生成class文件.使用APT主要的目的是简化开发者的工作量。
+- 因为APT可以编译程序源代码的同时，生成一些附属文件(比如源文件、类文件、程序发布描述文件等)，这些附属文件的内容也都是与源代码相关的，换句话说，使用APT可以代替传统的对代码信息和附属文件的维护工作。
+- APT的相关api都在com.sun.mirror 包下，在jdk7及之后，apt的相关api就被废除了，代替的是JSR269。JSR269的api在 javax.annotation.processing and javax.lang.model包下。换句话说JSR269是对APT的封装，并且集成到了javac中。接下来我们只说JSR269。
+
+我们都知道处理@Retention(RetentionPolicy.RUNTIME)的注解，使用的是反射技术。那么处理@Retention(RetentionPolicy.SOURCE）使用的是什么技术呢？这就需要了解标注处理器了。
+为了更深入了解通过Annotation处理生成代码的原理，本文实现一个自动生成gettet和setter的标注处理器。
+1. 先定义一个类，并加上文章上面定义的@AutoCoding
+</code></pre></div></div>
+<p>@AutoCoding
+public class Student {
+    private String id;
+    private String name;
+    private Integer age;
+}</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>2. 实现Processor类接口
+AbstractProcessor是Processor类接口的抽象实现类，然后需要重载以下主要方法即可。
+-  init 处理环境类初始化Processor类
+</code></pre></div></div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//注解处理器可用此创建新文件（源文件、类文件、辅助资源文件）。由此方法创建的源文件和类文件将由管理它们的工具（javac）处理。
+private Filer filer;
+//注解处理器用此来报告错误消息、警告和其他通知的方式。可以为它的方法传递元素、注解、注解值，以提供消息的位置提示
+private Messager messager;
+
+@Override
+public synchronized void init(ProcessingEnvironment processingEnv) {
+    super.init(processingEnv);
+    //初始化Filer和Messager
+    this.filer = processingEnv.getFiler();
+    this.messager = processingEnv.getMessager();
+} ``` - getSupportedOptions()方法：获取通过注解@SupportedOptions设置的可支持的输入选项值（-A参数），具体实现如下： ```  @Override
+public SourceVersion getSupportedSourceVersion() {
+    return SourceVersion.latestSupported();
+} ```
+</code></pre></div></div>
+
+<ul>
+  <li>getSupportedAnnotationTypes方法
+定义注解处理器注册到哪些注解上
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  @Override
+  public Set&lt;String&gt; getSupportedAnnotationTypes() {
+      Set&lt;String&gt; annotataions = new LinkedHashSet&lt;String&gt;();
+      annotataions.add(AutoCoding.class.getCanonicalName());
+      return annotataions;
+  }
+</code></pre></div>    </div>
+  </li>
+  <li>核心处理方法process
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@Override
+  public boolean process(Set&lt;? extends TypeElement&gt; annotations, RoundEnvironment roundEnv) {
+      Set&lt;? extends Element&gt; genElements = roundEnv.getElementsAnnotatedWith(AutoCoding.class);
+      for (Element e : genElements) {
+          messager.printMessage(Diagnostic.Kind.NOTE, e.toString());
+          System.out.println("&gt;&gt;&gt; " + e.getSimpleName());
+          AutoCoding autoCoding = e.getAnnotation(AutoCoding.class);
+          String className = e.getSimpleName().toString();
+          //获取所有的方法元素
+          List&lt;? extends Element&gt; genElementAlls = e.getEnclosedElements();
+
+          TypeSpec.Builder typeBuilder = TypeSpec.classBuilder(className+"Auto")//HelloWorld是类名
+                  .addModifiers(Modifier.PUBLIC);
+
+          for (Element ele : genElementAlls) {
+              if (ele.getKind() == ElementKind.FIELD) {
+                  VariableElement varELe = (VariableElement) ele;
+                  String fieldName = varELe.getSimpleName().toString();
+                  TypeName type = TypeName.get(ele.asType());
+                  Modifier [] modifiers =new Modifier[varELe.getModifiers().size()];
+                  varELe.getModifiers().toArray(modifiers);
+                  FieldSpec field = FieldSpec.builder(type, fieldName)
+                          .addModifiers(modifiers)
+                          .build();
+
+                  typeBuilder.addField(field);
+                  ParameterSpec parameterSpec=ParameterSpec.builder(type, fieldName)
+                          .build();
+                  String fieldType = varELe.asType().toString();
+                  MethodSpec setter = MethodSpec.methodBuilder("set" + fieldName.substring(0,1).toUpperCase()+fieldName.substring(1))
+                          .addModifiers(Modifier.PUBLIC)
+                          .addParameter(parameterSpec)
+                          .addStatement("this." + fieldName + "=" + fieldName)
+                          .build();
+                  typeBuilder.addMethod(setter); //在类中添加方法
+                  MethodSpec getter = MethodSpec.methodBuilder("get" + fieldName.substring(0,1).toUpperCase()+fieldName.substring(1))
+                          .addModifiers(Modifier.PUBLIC)
+                          .returns(type)
+                          .addStatement("return this." + fieldName)
+                          .build();
+                  typeBuilder.addMethod(getter);
+              }
+          }
+          TypeSpec typeSpec = typeBuilder.build();
+          JavaFile javaFile = JavaFile.builder("anotation", typeSpec)
+                  .build();
+          try {
+              javaFile.writeTo(filer);
+          } catch (IOException e1) {
+              e1.printStackTrace();
+          }
+      }
+      return true;
+  }
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<ol>
+  <li>执行注解处理器</li>
+</ol>
+
+<p>注解处理器编写完成后，需要使用java提供的工具javac来执行才能真正的起作用。下面介绍一下javac工具相关注解的选项。</p>
+<ul>
+  <li>用法：javac <选项> <源文件></源文件></选项></li>
+</ul>
+
+<p>其中，注解可能乃至选项包括：</p>
+
+<p>-cp <路径> 指定查找用户类文件和注释处理程序的位置。</路径></p>
+
+<p>-proc:{none,only} 控制是否执行注释处理和/或编译。-proc:none表示编译期不执行注解处理器； -proc:only表示只执行注解处理器，不进行任何注解之后的编译。</p>
+
+<p>-processor <class1>[,<class2>,<class3>…]要运行的注释处理程序的名称；绕过默认的搜索进程。</class3></class2></class1></p>
+
+<p>-processorpath <路径>        指定查找注释处理程序的位置。如果未指定，将使用-cp指定的路径。</路径></p>
+
+<p>-d <目录> 指定存放生成的类文件的位置。</目录></p>
+
+<p>-s <目录> 指定存放生成的源文件的位置。</目录></p>
+
+<p>-Akey[=value] 传递给注释处理程序的选项。</p>
+<ul>
+  <li>执行编译</li>
+</ul>
+
+<p>javac -d target src/main/java/anotation/*.java -cp ~/.m2/repository/com/squareup/javapoet/1.11.1/javapoet-1.11.1.jar
+这一步主要是生成了processor的class文件</p>
+<ul>
+  <li>执行processor创建代码生成</li>
+</ul>
+
+<p>javac -d target -processor anotation.StudentAutoCodingProcessor -s src/main/java/ src/main/java/anotation/ -cp ～/.m2/repository/com/squareup/javapoet/1.11.1/javapoet-1.11.1.jar:target
+这一步即生成了StudentAuto类：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class StudentAuto {
+    private String id;
+    private String name;
+    private Integer age;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+}
+</code></pre></div></div>
+<h4 id="代码生成">代码生成</h4>
+<p>在process方法中我用到了 javapoet 类库创建代码，是不是觉得很规范，很酷？望词生意，她所传达的意思就是写代码像诗人作诗一样肆意洒脱。只不过他的目标是机器来代替人来写具体的代码，写什么是人来规范。下面简单介绍下javapoet。
+javapoet里面常用的几个类：</p>
+
+<ul>
+  <li>MethodSpec 代表一个构造函数或方法声明。</li>
+  <li>TypeSpec 代表一个类，接口，或者枚举声明。</li>
+  <li>FieldSpec 代表一个成员变量，一个字段声明。</li>
+  <li>JavaFile包含一个顶级类的Java文件。</li>
+</ul>
+
+<p>按照惯例，写demo还得请来HelloWorld。</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>private static void generateHelloworld() throws IOException {
+        MethodSpec main = MethodSpec.methodBuilder("main")
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addParameter(String[].class, "args")
+                .addCode("System.out.println(\"Hello World\");\n")
+                .build();
+        TypeSpec typeSpec = TypeSpec.classBuilder("HelloWorld")
+                .addModifiers(Modifier.FINAL, Modifier.PUBLIC)
+                .addMethod(main).build();
+        JavaFile javaFile = JavaFile.builder("com.example.helloworld", typeSpec).build();
+        javaFile.writeTo(System.out);
+    }
+
+</code></pre></div></div>
+<p>自动生成的代码如下：</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">com</span><span class="p">.</span><span class="n">example</span><span class="p">.</span><span class="n">helloworld</span><span class="p">;</span>
+
+<span class="n">import</span> <span class="n">java</span><span class="p">.</span><span class="n">lang</span><span class="p">.</span><span class="k">String</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="n">final</span> <span class="n">class</span> <span class="n">HelloWorld</span> <span class="p">{</span>
+  <span class="k">public</span> <span class="n">static</span> <span class="n">void</span> <span class="n">main</span><span class="p">(</span><span class="k">String</span><span class="p">[]</span> <span class="n">args</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nf">System</span><span class="p">.</span><span class="n">out</span><span class="p">.</span><span class="n">println</span><span class="p">(</span><span class="s2">"Hello World"</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>好了，poet的内容实在太多，师父领进门，修行靠个人，点到为止，更多内容戳<a href="https://github.com/square/javapoet">»&gt;</a>。
+到此，文章是写完了，但是思考还木有停止：技术的发展是让程序员少写或者不写代码，jdk和众多第三方库花了很大的力气也是在朝着这个方向努力，在上面的例子我们也看到了这个结果，但是并没有承诺让程序员少看代码。这不得不让人怀疑他们努力的方向。可能是机器真的需要人来监督。</p>

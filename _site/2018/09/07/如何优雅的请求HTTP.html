@@ -1,0 +1,272 @@
+<p>提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。</p>
+
+<p>需求描述：比如在调度系统里的一个Hive Sql任务完成后通常会产出一个Hive表，但是这个表要被下游很多其他任务读取，此时需要保证上游任务的结果正确性。为此另一个系统提供验证的http服务，调用方调用http服务获取校验结果。要求如果校验失败，则报警，这个过程直到该问题解决。从业务方和产品方来看这个需求很简单，仿佛是随口而出，但是在工程师看来，这个需求实现起来相当操蛋，且听操蛋君分析在这个过程中需要考虑哪些问题：</p>
+<ol>
+  <li>服务方持续不可用，比如系统宕机。校验服务作为调度系统的辅助方，绝对不能阻塞调度主流程，也就是说即使校验服务挂了，调度系统该继续还是要继续。</li>
+  <li>服务方瞬间不可用，比如临时性网络中断，系统瞬间负载过高。此时调用可能临时不可用，重试一次可能又成功。</li>
+  <li>校验服务耗时太久，调用方请求超时异常返回。</li>
+  <li>发起校验的请求和查询校验结果的请求，这两步都有可能发生异常。</li>
+  <li>服务方的校验规则有部分成功执行，但另一部分仍未完成，包括异常未执行和执行规则期间规则变动（这一种情况不在考虑之列）。</li>
+  <li>失败报警分为2种情况：校验服务持续不可用的报警，单个任务校验失败的报警。这种情况的报警级别不一样，报警通知对象也不一样。</li>
+  <li>对于校验未完成的情况，无法得知是校验成功还是失败，次数必须给出超时判断。</li>
+</ol>
+
+<p>别忘了这只是个日常需求，但不要按照大工程的级别来处理。为了让问题简单解决，可以把问题简化为：</p>
+<ol>
+  <li>只有在系统可用且发起校验的请求成功被处理的情况下才去获取校验结果。</li>
+  <li>获取校验结果必须是成功返回。</li>
+  <li>返回的校验结果必须包含校验成功，校验失败和校验未完成的具体信息。</li>
+  <li>校验成功包含经过一定次数的重试而最终成功。</li>
+  <li>未完成指的是经过多次调用等待仍未产出结果。</li>
+</ol>
+
+<p>接下来看下如何优雅实现以上逻辑。这就是本文想祭出的2大杀器工具包。</p>
+<ul>
+  <li>okhttp-3.9.0</li>
+  <li>guava-retrying-2.0.0</li>
+</ul>
+
+<h4 id="okhttp">okhttp</h4>
+<p>okhttp 是个高效请求http的库，相比httpClient更加轻量级好用。OkHttp 提供了对最新的 HTTP 协议版本 HTTP/2 和 SPDY 的支持，这使得对同一个主机发出的所有请求都可以共享相同的套接字连接。如果 HTTP/2 和 SPDY 不可用，OkHttp 会使用连接池来复用连接以提高效率。OkHttp 提供了对 GZIP 的默认支持来降低传输内容的大小。OkHttp 也提供了对 HTTP 响应的缓存机制，可以避免不必要的网络请求。当网络出现问题时，OkHttp 会自动重试一个主机的多个 IP 地址。</p>
+<h5 id="举几个例子">举几个例子：</h5>
+<ul>
+  <li>
+    <p>Get请求
+```
+OkHttpClient client = new OkHttpClient();</p>
+
+    <p>Request request = new Request.Builder()
+          .url(“http://www.baidu.com”)
+          .header(“User-Agent”, “My super agent”)
+          .addHeader(“Accept”, “text/html”)
+          .build();</p>
+
+    <p>Response response = client.newCall(request).execute();
+  if (!response.isSuccessful()) {
+      throw new IOException(“服务器端错误: “ + response);
+  }</p>
+
+    <p>System.out.println(response.header(“Server”));
+  System.out.println(response.headers(“Set-Cookie”));</p>
+  </li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>- POST请求
+</code></pre></div></div>
+<p>OkHttpClient client = new OkHttpClient();
+    MediaType MEDIA_TYPE_TEXT = MediaType.parse(“text/plain”);
+    String postBody = “Hello World”;</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Request request = new Request.Builder()
+        .url("http://www.baidu.com")
+        .post(RequestBody.create(MEDIA_TYPE_TEXT, postBody))
+        .build();
+ 
+Response response = client.newCall(request).execute();
+if (!response.isSuccessful()) {
+    throw new IOException("服务器端错误: " + response);
+}
+ 
+System.out.println(response.body().string()); ```
+</code></pre></div></div>
+
+<ul>
+  <li>异步请求
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>OkHttpClient client = new OkHttpClient();
+ 
+  Request request = new Request.Builder()
+          .url("http://www.baidu.com")
+          .build();
+ 
+  client.newCall(request).enqueue(new Callback() {
+      public void onFailure(Request request, IOException e) {
+          e.printStackTrace();
+      }
+ 
+      public void onResponse(Response response) throws IOException {
+          if (!response.isSuccessful()) {
+              throw new IOException("服务器端错误: " + response);
+          }
+ 
+          System.out.println(response.body().string());
+      }
+});
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p>参考：</p>
+<ul>
+  <li>https://www.ibm.com/developerworks/cn/java/j-lo-okhttp/index.html</li>
+</ul>
+
+<h4 id="guava-retrying">guava-retrying</h4>
+<p>Guava Retrying 是一个灵活方便的重试组件，包含了多种的重试策略，而且可以自定义来执行重试，同时也可以监控每次重试的结果和行为。</p>
+
+<p>This is a small extension to Google’s Guava library to allow for the creation of configurable retrying strategies for an arbitrary function call, such as something that talks to a remote service with flaky uptime.</p>
+
+<h5 id="举几个例子-1">举几个例子：</h5>
+
+<ul>
+  <li>如果抛出 IOException 则重试，如果返回结果为 null 或者等于 2 则重试，固定等待时长为 300 ms,最多尝试 3 次；</li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> Callable&lt;Integer&gt; task = new Callable&lt;Integer&gt;() {
+    @Override
+    public Integer call() throws Exception {
+        return 2;
+    }
+};
+
+Retryer&lt;Integer&gt; retryer = RetryerBuilder.&lt;Integer&gt;newBuilder()
+        .retryIfResult(Predicates.&lt;Integer&gt;isNull())
+        .retryIfResult(Predicates.equalTo(2))
+        .retryIfExceptionOfType(IOException.class)
+        .withStopStrategy(StopStrategies.stopAfterAttempt(3))
+        .withWaitStrategy(WaitStrategies.fixedWait(300, TimeUnit.MILLISECONDS))
+        .build();
+try {
+    retryer.call(task);
+} catch (ExecutionException e) {
+    e.printStackTrace();
+} catch (RetryException e) {
+    e.printStackTrace();
+}
+</code></pre></div></div>
+<ul>
+  <li>出现异常则执行重试，每次任务执行最长执行时间限定为 3 s，重试间隔时间初始为 3 s，最多重试 1 分钟，随着重试次数的增加每次递增 1 s，每次重试失败，打印日志；</li>
+</ul>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@Override
+    public Integer call() throws Exception {
+        return 2;
+    }
+};
+
+Retryer&lt;Integer&gt; retryer = RetryerBuilder.&lt;Integer&gt;newBuilder()
+        .retryIfException()
+        .withStopStrategy(StopStrategies.stopAfterDelay(30,TimeUnit.SECONDS))
+        .withWaitStrategy(WaitStrategies.incrementingWait(3, TimeUnit.SECONDS,1,TimeUnit.SECONDS))
+        .withAttemptTimeLimiter(AttemptTimeLimiters.&lt;Integer&gt;fixedTimeLimit(3,TimeUnit.SECONDS))
+        .withRetryListener(new RetryListener() {
+            @Override
+            public &lt;V&gt; void onRetry(Attempt&lt;V&gt; attempt) {
+                if (attempt.hasException()){
+                    attempt.getExceptionCause().printStackTrace();
+                }
+            }
+        })
+        .build();
+try {
+    retryer.call(task);
+} catch (ExecutionException e) {
+    e.printStackTrace();
+} catch (RetryException e) {
+    e.printStackTrace();
+}
+</code></pre></div></div>
+
+<h5 id="主要接口介绍">主要接口介绍：</h5>
+<p>Attempt：一次执行任务；</p>
+
+<p>AttemptTimeLimiter：单次任务执行时间限制（如果单次任务执行超时，则终止执行当前任务）；</p>
+
+<p>BlockStrategies：任务阻塞策略（通俗的讲就是当前任务执行完，下次任务还没开始这段时间做什么……），默认策略为：BlockStrategies.THREAD_SLEEP_STRATEGY 也就是调用 Thread.sleep(sleepTime);</p>
+
+<p>RetryException：重试异常；</p>
+
+<p>RetryListener：自定义重试监听器，可以用于异步记录错误日志；</p>
+
+<p>StopStrategy：停止重试策略，提供三种：</p>
+
+<p>StopAfterDelayStrategy ：设定一个最长允许的执行时间；比如设定最长执行10s，无论任务执行次数，只要重试的时候超出了最长时间，则任务终止，并返回重试异常RetryException；
+NeverStopStrategy ：不停止，用于需要一直轮训知道返回期望结果的情况；
+StopAfterAttemptStrategy ：设定最大重试次数，如果超出最大重试次数则停止重试，并返回重试异常；
+WaitStrategy：等待时长策略（控制时间间隔），返回结果为下次执行时长：</p>
+
+<p>FixedWaitStrategy：固定等待时长策略；
+RandomWaitStrategy：随机等待时长策略（可以提供一个最小和最大时长，等待时长为其区间随机值）
+IncrementingWaitStrategy：递增等待时长策略（提供一个初始值和步长，等待时间随重试次数增加而增加）
+ExponentialWaitStrategy：指数等待时长策略；
+FibonacciWaitStrategy ：Fibonacci 等待时长策略；
+ExceptionWaitStrategy ：异常时长等待策略；
+CompositeWaitStrategy ：复合时长等待策略；</p>
+
+<p>参考：
+http://lintrip.com/2016/05/27/guava-retry/</p>
+
+<h4 id="解决本文提出的问题">解决本文提出的问题</h4>
+<p>看了2大杀器，再来实现本文上面的需求，就简单多了。不做赘述，直接看核心逻辑。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if (submitCheck() {
+    checkResult();
+}
+
+ public static boolean submitCheck() {
+    try {
+        
+        StringBuilder urlBuilder = new StringBuilder(submitCheckUrl);
+        
+        WebApiResponse result = RestUtil.getWithRetry(urlBuilder.toString(),WebApiResponse.class);
+        if (result.getCode() == 1)
+            return false;
+
+    } catch (Throwable e) {
+        LOG.error("submitCheck failed,skip job checking" , e);
+        return false;
+    }
+    return true;
+    }
+    
+ public static boolean checkResult() {
+    try {
+
+        StringBuilder urlBuilder =new StringBuilder(checkUrl);
+        WebApiResponse result = getDQCResultWithRetry(urlBuilder.toString(),WebApiResponse.class);
+        if (result != null &amp;&amp; result.getCode() == 0) {
+            Map&lt;String, List&lt;RuleDO&gt;&gt; data = (Map&lt;String, List&lt;RuleDO&gt;&gt;) result.getData();
+            if (data.get("checkFailedList").size() &gt; 0) {
+                checkPass = false;
+                LOG.warn(JSON.toJSONString(jobIo) + " checkFailedList" + JSON.toJSONString(data.get("checkFailedList")));
+            } else if (data.get("notCompletedList").size() &gt; 0) {
+                checkPass = false;
+                NotifyUtil.callTelephone(notifyTel,"规则校验超时");
+
+            }
+         else {
+            LOG.warn("Not success to call " + urlBuilder.toString() + ",call result:" + result);
+            return true;
+        }
+    }
+    } catch (Throwable e) {
+        LOG.error("checkResult failed,skip checking",e);
+        return true;
+    }
+return checkPass;
+}
+
+ static Predicate&lt;WebApiResponse&gt; notCompletedPredicate = input -&gt; {
+        Map&lt;String, List&lt;RuleDO&gt;&gt; data = (Map&lt;String, List&lt;RuleDO&gt;&gt;) input.getData();
+        if (data.get("notCompletedList").size() &gt; 0)
+            return false;
+        return true;
+    };
+
+    public static WebApiResponse getDQCResultWithRetry(String url, Class&lt;WebApiResponse&gt; clazz) throws IOException {
+        Retryer&lt;WebApiResponse&gt; retryer = RetryerBuilder.&lt;WebApiResponse&gt;newBuilder()
+                .retryIfResult(Predicates.not(notCompletedPredicate))
+                .retryIfExceptionOfType(IOException.class)
+                .withStopStrategy(new DQCStopStrategy())
+                .withWaitStrategy(WaitStrategies.fixedWait(30, TimeUnit.SECONDS))
+                .withRetryListener(new DQCAlertListener())
+                .build();
+
+        try {
+            return retryer.call(() -&gt; get(url, clazz));
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        } catch (RetryException e) {
+            throw new IOException(e);
+        }
+    }
+</code></pre></div></div>

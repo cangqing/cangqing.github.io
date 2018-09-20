@@ -1,4 +1,923 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2018-09-20T10:25:03+08:00</updated><id>/feed.xml</id><entry><title type="html">Apples</title><link href="/2018/08/21/apples.html" rel="alternate" type="text/html" title="Apples" /><published>2018-08-21T00:00:00+08:00</published><updated>2018-08-21T00:00:00+08:00</updated><id>/2018/08/21/apples</id><content type="html" xml:base="/2018/08/21/apples.html">&lt;p&gt;An apple is a sweet, edible fruit produced by an apple tree.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2018-09-20T11:59:09+08:00</updated><id>/feed.xml</id><entry><title type="html">用swagger生成api接口文档</title><link href="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html" rel="alternate" type="text/html" title="用swagger生成api接口文档" /><published>2018-09-19T00:00:00+08:00</published><updated>2018-09-19T00:00:00+08:00</updated><id>/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3</id><content type="html" xml:base="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html">&lt;h4 id=&quot;导读&quot;&gt;导读&lt;/h4&gt;
+
+&lt;p&gt;swagger是一个API框架，号称世界上最流行的API工具。它提供了API管理的全套解决方案，比如API在线编辑器，API UI展示界面，代码生成器等诸多功能。&lt;/p&gt;
+
+&lt;p&gt;如果想引入swagger进行API管理。目前 springfox 是一个很好的选择，它内部会自动解析Spring容器中Controller暴露出的接口，并且也提供了一个界面用于展示或调用这些API。&lt;/p&gt;
+
+&lt;p&gt;本文主要内容是：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;利用 SpringFox 库生成实时文档；&lt;/li&gt;
+  &lt;li&gt;利用 Swagger2Markup Maven插件生成 asciidoc 文档；&lt;/li&gt;
+  &lt;li&gt;利用 asciidoctor Maven插件生成 html 或 pdf 文件；&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h4 id=&quot;开发环境&quot;&gt;开发环境&lt;/h4&gt;
+&lt;ol&gt;
+  &lt;li&gt;SpringBoot (2.0.4.RELEASE)&lt;/li&gt;
+  &lt;li&gt;SpringFox (2.5.0)&lt;/li&gt;
+  &lt;li&gt;Swagger2Markup (1.2.0)&lt;/li&gt;
+  &lt;li&gt;Maven 3.5.4&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h4 id=&quot;利用-springfox-库生成实时文档&quot;&gt;利用 SpringFox 库生成实时文档&lt;/h4&gt;
+&lt;p&gt;添加依赖&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&amp;lt;dependency&amp;gt;
+    &amp;lt;groupId&amp;gt;io.springfox&amp;lt;/groupId&amp;gt;
+    &amp;lt;artifactId&amp;gt;springfox-swagger2&amp;lt;/artifactId&amp;gt;
+    &amp;lt;version&amp;gt;${springfox.version}&amp;lt;/version&amp;gt;
+&amp;lt;/dependency&amp;gt;
+&amp;lt;dependency&amp;gt;
+    &amp;lt;groupId&amp;gt;io.springfox&amp;lt;/groupId&amp;gt;
+    &amp;lt;artifactId&amp;gt;springfox-swagger-ui&amp;lt;/artifactId&amp;gt;
+    &amp;lt;version&amp;gt;${springfox.version}&amp;lt;/version&amp;gt;
+&amp;lt;/dependency&amp;gt;
+&amp;lt;dependency&amp;gt;
+    &amp;lt;groupId&amp;gt;io.swagger&amp;lt;/groupId&amp;gt;
+    &amp;lt;artifactId&amp;gt;swagger-annotations&amp;lt;/artifactId&amp;gt;
+    &amp;lt;version&amp;gt;1.5.6&amp;lt;/version&amp;gt;
+&amp;lt;/dependency&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;@EnableSwagger2
+@Configuration
+public class SwaggerConfig {
+    //创建Docket Bean
+    @Bean
+    public Docket api() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .apiInfo(apiInfo())
+                .select()
+                // 排除 error 相关的 url
+                .paths(Predicates.and(ant(&quot;/**&quot;), Predicates.not(ant(&quot;/error&quot;))))
+                .build()
+                .ignoredParameterTypes(ApiIgnore.class)
+                .enableUrlTemplating(true);
+    }
+
+    private ApiInfo apiInfo() {
+        return new ApiInfoBuilder()
+                .title(&quot;API for Scheduler&quot;)
+                .description(&quot;Scheduler API Description&quot;)
+                .contact(new Contact(&quot;shenjia&quot;, &quot;http://www.caimi-inc.com&quot;, &quot;shenjia@wacai.com&quot;))
+                .license(&quot;Apache 2.0&quot;)
+                .licenseUrl(&quot;http://www.apache.org/licenses/LICENSE-2.0.html&quot;)
+                .version(&quot;2.0.0&quot;)
+                .build();
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;访问：http://localhost:8080/swagger-ui.html 即可看到所有API信息。&lt;/p&gt;
+
+&lt;h4 id=&quot;利用swagger2markup-插件来生成-asciidoc-文档&quot;&gt;利用swagger2Markup 插件来生成 Asciidoc 文档&lt;/h4&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&amp;lt;properties&amp;gt;
+    &amp;lt;project.build.sourceEncoding&amp;gt;UTF-8&amp;lt;/project.build.sourceEncoding&amp;gt;
+    &amp;lt;project.reporting.outputEncoding&amp;gt;UTF-8&amp;lt;/project.reporting.outputEncoding&amp;gt;
+    &amp;lt;java.version&amp;gt;1.8&amp;lt;/java.version&amp;gt;
+
+    &amp;lt;swagger2markup.version&amp;gt;1.2.0&amp;lt;/swagger2markup.version&amp;gt;
+    &amp;lt;springfox.version&amp;gt;2.5.0&amp;lt;/springfox.version&amp;gt;
+
+    &amp;lt;asciidoctor.input.directory&amp;gt;${project.basedir}/src/docs/asciidoc&amp;lt;/asciidoctor.input.directory&amp;gt;
+
+    &amp;lt;swagger.output.dir&amp;gt;${project.build.directory}/swagger&amp;lt;/swagger.output.dir&amp;gt;
+    &amp;lt;swagger.snippetOutput.dir&amp;gt;${project.build.directory}/asciidoc/snippets&amp;lt;/swagger.snippetOutput.dir&amp;gt;
+    &amp;lt;generated.asciidoc.directory&amp;gt;${project.build.directory}/asciidoc/generated&amp;lt;/generated.asciidoc.directory&amp;gt;
+    &amp;lt;asciidoctor.html.output.directory&amp;gt;${project.build.directory}/asciidoc/html&amp;lt;/asciidoctor.html.output.directory&amp;gt;
+    &amp;lt;asciidoctor.pdf.output.directory&amp;gt;${project.build.directory}/asciidoc/pdf&amp;lt;/asciidoctor.pdf.output.directory&amp;gt;
+    &amp;lt;swagger.input&amp;gt;${swagger.output.dir}/swagger.json&amp;lt;/swagger.input&amp;gt;
+&amp;lt;/properties&amp;gt;
+
+&amp;lt;!-- First, use the swagger2markup plugin to generate asciidoc --&amp;gt;
+&amp;lt;plugin&amp;gt;
+    &amp;lt;groupId&amp;gt;io.github.swagger2markup&amp;lt;/groupId&amp;gt;
+    &amp;lt;artifactId&amp;gt;swagger2markup-maven-plugin&amp;lt;/artifactId&amp;gt;
+    &amp;lt;version&amp;gt;${swagger2markup.version}&amp;lt;/version&amp;gt;
+    &amp;lt;dependencies&amp;gt;
+        &amp;lt;dependency&amp;gt;
+            &amp;lt;groupId&amp;gt;ca.szc.thirdparty.nl.jworks.markdown_to_asciidoc&amp;lt;/groupId&amp;gt;
+            &amp;lt;artifactId&amp;gt;markdown_to_asciidoc&amp;lt;/artifactId&amp;gt;
+            &amp;lt;!-- Keep in sync with markup-document-builder's dependency --&amp;gt;
+            &amp;lt;version&amp;gt;1.0&amp;lt;/version&amp;gt;
+        &amp;lt;/dependency&amp;gt;
+        &amp;lt;dependency&amp;gt;
+            &amp;lt;groupId&amp;gt;io.github.swagger2markup&amp;lt;/groupId&amp;gt;
+            &amp;lt;artifactId&amp;gt;swagger2markup&amp;lt;/artifactId&amp;gt;
+            &amp;lt;!-- Keep in sync with swagger2markup-maven-plugin's dependency --&amp;gt;
+            &amp;lt;version&amp;gt;${swagger2markup.version}&amp;lt;/version&amp;gt;
+            &amp;lt;exclusions&amp;gt;
+                &amp;lt;exclusion&amp;gt;
+                    &amp;lt;groupId&amp;gt;nl.jworks.markdown_to_asciidoc&amp;lt;/groupId&amp;gt;
+                    &amp;lt;artifactId&amp;gt;markdown_to_asciidoc&amp;lt;/artifactId&amp;gt;
+                &amp;lt;/exclusion&amp;gt;
+            &amp;lt;/exclusions&amp;gt;
+        &amp;lt;/dependency&amp;gt;
+        &amp;lt;dependency&amp;gt;
+            &amp;lt;groupId&amp;gt;io.github.swagger2markup&amp;lt;/groupId&amp;gt;
+            &amp;lt;artifactId&amp;gt;swagger2markup-import-files-ext&amp;lt;/artifactId&amp;gt;
+            &amp;lt;version&amp;gt;${swagger2markup.version}&amp;lt;/version&amp;gt;
+        &amp;lt;/dependency&amp;gt;
+        &amp;lt;dependency&amp;gt;
+            &amp;lt;groupId&amp;gt;io.github.swagger2markup&amp;lt;/groupId&amp;gt;
+            &amp;lt;artifactId&amp;gt;swagger2markup-spring-restdocs-ext&amp;lt;/artifactId&amp;gt;
+            &amp;lt;version&amp;gt;${swagger2markup.version}&amp;lt;/version&amp;gt;
+        &amp;lt;/dependency&amp;gt;
+    &amp;lt;/dependencies&amp;gt;
+    &amp;lt;configuration&amp;gt;
+        &amp;lt;swaggerInput&amp;gt;${swagger.input}&amp;lt;/swaggerInput&amp;gt;
+        &amp;lt;outputDir&amp;gt;${generated.asciidoc.directory}&amp;lt;/outputDir&amp;gt;
+        &amp;lt;config&amp;gt;
+            &amp;lt;swagger2markup.markupLanguage&amp;gt;ASCIIDOC&amp;lt;/swagger2markup.markupLanguage&amp;gt;
+            &amp;lt;swagger2markup.pathsGroupedBy&amp;gt;TAGS&amp;lt;/swagger2markup.pathsGroupedBy&amp;gt;
+
+            &amp;lt;swagger2markup.extensions.dynamicOverview.contentPath&amp;gt;
+                ${project.basedir}/src/docs/asciidoc/extensions/overview
+            &amp;lt;/swagger2markup.extensions.dynamicOverview.contentPath&amp;gt;
+            &amp;lt;swagger2markup.extensions.dynamicDefinitions.contentPath&amp;gt;
+                ${project.basedir}/src/docs/asciidoc/extensions/definitions
+            &amp;lt;/swagger2markup.extensions.dynamicDefinitions.contentPath&amp;gt;
+            &amp;lt;swagger2markup.extensions.dynamicPaths.contentPath&amp;gt;
+                ${project.basedir}/src/docs/asciidoc/extensions/paths
+            &amp;lt;/swagger2markup.extensions.dynamicPaths.contentPath&amp;gt;
+            &amp;lt;swagger2markup.extensions.dynamicSecurity.contentPath&amp;gt;
+                ${project.basedir}src/docs/asciidoc/extensions/security/
+            &amp;lt;/swagger2markup.extensions.dynamicSecurity.contentPath&amp;gt;
+
+            &amp;lt;swagger2markup.extensions.springRestDocs.snippetBaseUri&amp;gt;${swagger.snippetOutput.dir}
+            &amp;lt;/swagger2markup.extensions.springRestDocs.snippetBaseUri&amp;gt;
+            &amp;lt;swagger2markup.extensions.springRestDocs.defaultSnippets&amp;gt;true
+            &amp;lt;/swagger2markup.extensions.springRestDocs.defaultSnippets&amp;gt;
+        &amp;lt;/config&amp;gt;
+    &amp;lt;/configuration&amp;gt;
+    &amp;lt;executions&amp;gt;
+        &amp;lt;execution&amp;gt;
+            &amp;lt;phase&amp;gt;test&amp;lt;/phase&amp;gt;
+            &amp;lt;goals&amp;gt;
+                &amp;lt;goal&amp;gt;convertSwagger2markup&amp;lt;/goal&amp;gt;
+            &amp;lt;/goals&amp;gt;
+        &amp;lt;/execution&amp;gt;
+    &amp;lt;/executions&amp;gt;
+&amp;lt;/plugin&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;利用-asciidoctor-maven插件生成-html-或-pdf-文件&quot;&gt;利用 asciidoctor Maven插件生成 html 或 pdf 文件&lt;/h4&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &amp;lt;!-- Run the generated asciidoc through Asciidoctor to generate
+                 other documentation types, such as PDFs or HTML5 --&amp;gt;
+    &amp;lt;plugin&amp;gt;
+        &amp;lt;groupId&amp;gt;org.asciidoctor&amp;lt;/groupId&amp;gt;
+        &amp;lt;artifactId&amp;gt;asciidoctor-maven-plugin&amp;lt;/artifactId&amp;gt;
+        &amp;lt;!-- Include Asciidoctor PDF for pdf generation --&amp;gt;
+        &amp;lt;dependencies&amp;gt;
+            &amp;lt;dependency&amp;gt;
+                &amp;lt;groupId&amp;gt;org.asciidoctor&amp;lt;/groupId&amp;gt;
+                &amp;lt;artifactId&amp;gt;asciidoctorj-pdf&amp;lt;/artifactId&amp;gt;
+                &amp;lt;version&amp;gt;1.5.0-alpha.10.1&amp;lt;/version&amp;gt;
+            &amp;lt;/dependency&amp;gt;
+            &amp;lt;dependency&amp;gt;
+                &amp;lt;groupId&amp;gt;org.jruby&amp;lt;/groupId&amp;gt;
+                &amp;lt;artifactId&amp;gt;jruby-complete&amp;lt;/artifactId&amp;gt;
+                &amp;lt;version&amp;gt;1.7.21&amp;lt;/version&amp;gt;
+            &amp;lt;/dependency&amp;gt;
+        &amp;lt;/dependencies&amp;gt;
+        &amp;lt;!-- Configure generic document generation settings --&amp;gt;
+        &amp;lt;configuration&amp;gt;
+            &amp;lt;sourceDirectory&amp;gt;${asciidoctor.input.directory}&amp;lt;/sourceDirectory&amp;gt;
+            &amp;lt;sourceDocumentName&amp;gt;index.adoc&amp;lt;/sourceDocumentName&amp;gt;
+            &amp;lt;attributes&amp;gt;
+                &amp;lt;doctype&amp;gt;book&amp;lt;/doctype&amp;gt;
+                &amp;lt;toc&amp;gt;left&amp;lt;/toc&amp;gt;
+                &amp;lt;toclevels&amp;gt;3&amp;lt;/toclevels&amp;gt;
+                &amp;lt;numbered&amp;gt;&amp;lt;/numbered&amp;gt;
+                &amp;lt;hardbreaks&amp;gt;&amp;lt;/hardbreaks&amp;gt;
+                &amp;lt;sectlinks&amp;gt;&amp;lt;/sectlinks&amp;gt;
+                &amp;lt;sectanchors&amp;gt;&amp;lt;/sectanchors&amp;gt;
+                &amp;lt;generated&amp;gt;${generated.asciidoc.directory}&amp;lt;/generated&amp;gt;
+            &amp;lt;/attributes&amp;gt;
+        &amp;lt;/configuration&amp;gt;
+        &amp;lt;!-- Since each execution can only handle one backend, run
+             separate executions for each desired output type --&amp;gt;
+        &amp;lt;executions&amp;gt;
+            &amp;lt;execution&amp;gt;
+                &amp;lt;id&amp;gt;output-html&amp;lt;/id&amp;gt;
+                &amp;lt;phase&amp;gt;test&amp;lt;/phase&amp;gt;
+                &amp;lt;goals&amp;gt;
+                    &amp;lt;goal&amp;gt;process-asciidoc&amp;lt;/goal&amp;gt;
+                &amp;lt;/goals&amp;gt;
+                &amp;lt;configuration&amp;gt;
+                    &amp;lt;backend&amp;gt;html5&amp;lt;/backend&amp;gt;
+                    &amp;lt;outputDirectory&amp;gt;${asciidoctor.html.output.directory}&amp;lt;/outputDirectory&amp;gt;
+                &amp;lt;/configuration&amp;gt;
+            &amp;lt;/execution&amp;gt;
+    
+            &amp;lt;execution&amp;gt;
+                &amp;lt;id&amp;gt;output-pdf&amp;lt;/id&amp;gt;
+                &amp;lt;phase&amp;gt;test&amp;lt;/phase&amp;gt;
+                &amp;lt;goals&amp;gt;
+                    &amp;lt;goal&amp;gt;process-asciidoc&amp;lt;/goal&amp;gt;
+                &amp;lt;/goals&amp;gt;
+                &amp;lt;configuration&amp;gt;
+                    &amp;lt;backend&amp;gt;pdf&amp;lt;/backend&amp;gt;
+                    &amp;lt;outputDirectory&amp;gt;${asciidoctor.pdf.output.directory}&amp;lt;/outputDirectory&amp;gt;
+                &amp;lt;/configuration&amp;gt;
+            &amp;lt;/execution&amp;gt;
+    
+        &amp;lt;/executions&amp;gt;
+    &amp;lt;/plugin&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;踩过的坑&quot;&gt;踩过的坑&lt;/h4&gt;
+&lt;p&gt;swagger2markup-maven-plugin 这个插件依赖的包在maven仓库没有对应依赖，导致无法编译。解决办法：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;替换原有依赖 markdown_to_asciidoc
+```&lt;/li&gt;
+&lt;/ol&gt;
+&lt;dependency&gt;
+    &lt;groupId&gt;ca.szc.thirdparty.nl.jworks.markdown_to_asciidoc&lt;/groupId&gt;
+    &lt;artifactId&gt;markdown_to_asciidoc&lt;/artifactId&gt;
+    &lt;!-- Keep in sync with markup-document-builder's dependency --&gt;
+    &lt;version&gt;1.0&lt;/version&gt;
+&lt;/dependency&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;2. 本地安装paleo-core
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;mvn install:install-file -Dfile=～/paleo-core-0.10.1.jar -DgroupId=ch.netzwerg -DartifactId=paleo-core -Dversion=0.10.1 -Dpackaging=jar
+```&lt;/p&gt;
+&lt;h4 id=&quot;reference&quot;&gt;Reference&lt;/h4&gt;
+&lt;p&gt;https://yq.aliyun.com/articles/599809?utm_content=m_1000002417&amp;amp;do=login&amp;amp;accounttraceid=975558fd-4933-4f0c-9bb2-01b7f4c6a971&lt;/p&gt;
+
+&lt;p&gt;https://github.com/Swagger2Markup/spring-swagger2markup-demo&lt;/p&gt;
+
+&lt;p&gt;https://asciidoctor.org/docs/asciidoc-syntax-quick-reference/&lt;/p&gt;
+
+&lt;p&gt;https://www.jianshu.com/p/ecb8daa4ecf7&lt;/p&gt;
+
+&lt;p&gt;https://leongfeng.github.io/2017/02/20/springboot-springfox-swagger2markup-spring-restdoc&lt;/p&gt;</content><author><name></name></author><summary type="html">导读</summary></entry><entry><title type="html">如何优雅的请求http</title><link href="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html" rel="alternate" type="text/html" title="如何优雅的请求http" /><published>2018-09-07T00:00:00+08:00</published><updated>2018-09-07T00:00:00+08:00</updated><id>/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP</id><content type="html" xml:base="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html">&lt;p&gt;提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。&lt;/p&gt;
+
+&lt;p&gt;需求描述：比如在调度系统里的一个Hive Sql任务完成后通常会产出一个Hive表，但是这个表要被下游很多其他任务读取，此时需要保证上游任务的结果正确性。为此另一个系统提供验证的http服务，调用方调用http服务获取校验结果。要求如果校验失败，则报警，这个过程直到该问题解决。从业务方和产品方来看这个需求很简单，仿佛是随口而出，但是在工程师看来，这个需求实现起来相当操蛋，且听操蛋君分析在这个过程中需要考虑哪些问题：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;服务方持续不可用，比如系统宕机。校验服务作为调度系统的辅助方，绝对不能阻塞调度主流程，也就是说即使校验服务挂了，调度系统该继续还是要继续。&lt;/li&gt;
+  &lt;li&gt;服务方瞬间不可用，比如临时性网络中断，系统瞬间负载过高。此时调用可能临时不可用，重试一次可能又成功。&lt;/li&gt;
+  &lt;li&gt;校验服务耗时太久，调用方请求超时异常返回。&lt;/li&gt;
+  &lt;li&gt;发起校验的请求和查询校验结果的请求，这两步都有可能发生异常。&lt;/li&gt;
+  &lt;li&gt;服务方的校验规则有部分成功执行，但另一部分仍未完成，包括异常未执行和执行规则期间规则变动（这一种情况不在考虑之列）。&lt;/li&gt;
+  &lt;li&gt;失败报警分为2种情况：校验服务持续不可用的报警，单个任务校验失败的报警。这种情况的报警级别不一样，报警通知对象也不一样。&lt;/li&gt;
+  &lt;li&gt;对于校验未完成的情况，无法得知是校验成功还是失败，次数必须给出超时判断。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;别忘了这只是个日常需求，但不要按照大工程的级别来处理。为了让问题简单解决，可以把问题简化为：&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;只有在系统可用且发起校验的请求成功被处理的情况下才去获取校验结果。&lt;/li&gt;
+  &lt;li&gt;获取校验结果必须是成功返回。&lt;/li&gt;
+  &lt;li&gt;返回的校验结果必须包含校验成功，校验失败和校验未完成的具体信息。&lt;/li&gt;
+  &lt;li&gt;校验成功包含经过一定次数的重试而最终成功。&lt;/li&gt;
+  &lt;li&gt;未完成指的是经过多次调用等待仍未产出结果。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;接下来看下如何优雅实现以上逻辑。这就是本文想祭出的2大杀器工具包。&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;okhttp-3.9.0&lt;/li&gt;
+  &lt;li&gt;guava-retrying-2.0.0&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;okhttp&quot;&gt;okhttp&lt;/h4&gt;
+&lt;p&gt;okhttp 是个高效请求http的库，相比httpClient更加轻量级好用。OkHttp 提供了对最新的 HTTP 协议版本 HTTP/2 和 SPDY 的支持，这使得对同一个主机发出的所有请求都可以共享相同的套接字连接。如果 HTTP/2 和 SPDY 不可用，OkHttp 会使用连接池来复用连接以提高效率。OkHttp 提供了对 GZIP 的默认支持来降低传输内容的大小。OkHttp 也提供了对 HTTP 响应的缓存机制，可以避免不必要的网络请求。当网络出现问题时，OkHttp 会自动重试一个主机的多个 IP 地址。&lt;/p&gt;
+&lt;h5 id=&quot;举几个例子&quot;&gt;举几个例子：&lt;/h5&gt;
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Get请求
+```
+OkHttpClient client = new OkHttpClient();&lt;/p&gt;
+
+    &lt;p&gt;Request request = new Request.Builder()
+          .url(“http://www.baidu.com”)
+          .header(“User-Agent”, “My super agent”)
+          .addHeader(“Accept”, “text/html”)
+          .build();&lt;/p&gt;
+
+    &lt;p&gt;Response response = client.newCall(request).execute();
+  if (!response.isSuccessful()) {
+      throw new IOException(“服务器端错误: “ + response);
+  }&lt;/p&gt;
+
+    &lt;p&gt;System.out.println(response.header(“Server”));
+  System.out.println(response.headers(“Set-Cookie”));&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;- POST请求
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;OkHttpClient client = new OkHttpClient();
+    MediaType MEDIA_TYPE_TEXT = MediaType.parse(“text/plain”);
+    String postBody = “Hello World”;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;Request request = new Request.Builder()
+        .url(&quot;http://www.baidu.com&quot;)
+        .post(RequestBody.create(MEDIA_TYPE_TEXT, postBody))
+        .build();
+ 
+Response response = client.newCall(request).execute();
+if (!response.isSuccessful()) {
+    throw new IOException(&quot;服务器端错误: &quot; + response);
+}
+ 
+System.out.println(response.body().string()); ```
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;异步请求
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;OkHttpClient client = new OkHttpClient();
+ 
+  Request request = new Request.Builder()
+          .url(&quot;http://www.baidu.com&quot;)
+          .build();
+ 
+  client.newCall(request).enqueue(new Callback() {
+      public void onFailure(Request request, IOException e) {
+          e.printStackTrace();
+      }
+ 
+      public void onResponse(Response response) throws IOException {
+          if (!response.isSuccessful()) {
+              throw new IOException(&quot;服务器端错误: &quot; + response);
+          }
+ 
+          System.out.println(response.body().string());
+      }
+});
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;参考：&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;https://www.ibm.com/developerworks/cn/java/j-lo-okhttp/index.html&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;guava-retrying&quot;&gt;guava-retrying&lt;/h4&gt;
+&lt;p&gt;Guava Retrying 是一个灵活方便的重试组件，包含了多种的重试策略，而且可以自定义来执行重试，同时也可以监控每次重试的结果和行为。&lt;/p&gt;
+
+&lt;p&gt;This is a small extension to Google’s Guava library to allow for the creation of configurable retrying strategies for an arbitrary function call, such as something that talks to a remote service with flaky uptime.&lt;/p&gt;
+
+&lt;h5 id=&quot;举几个例子-1&quot;&gt;举几个例子：&lt;/h5&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;如果抛出 IOException 则重试，如果返回结果为 null 或者等于 2 则重试，固定等待时长为 300 ms,最多尝试 3 次；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; Callable&amp;lt;Integer&amp;gt; task = new Callable&amp;lt;Integer&amp;gt;() {
+    @Override
+    public Integer call() throws Exception {
+        return 2;
+    }
+};
+
+Retryer&amp;lt;Integer&amp;gt; retryer = RetryerBuilder.&amp;lt;Integer&amp;gt;newBuilder()
+        .retryIfResult(Predicates.&amp;lt;Integer&amp;gt;isNull())
+        .retryIfResult(Predicates.equalTo(2))
+        .retryIfExceptionOfType(IOException.class)
+        .withStopStrategy(StopStrategies.stopAfterAttempt(3))
+        .withWaitStrategy(WaitStrategies.fixedWait(300, TimeUnit.MILLISECONDS))
+        .build();
+try {
+    retryer.call(task);
+} catch (ExecutionException e) {
+    e.printStackTrace();
+} catch (RetryException e) {
+    e.printStackTrace();
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;ul&gt;
+  &lt;li&gt;出现异常则执行重试，每次任务执行最长执行时间限定为 3 s，重试间隔时间初始为 3 s，最多重试 1 分钟，随着重试次数的增加每次递增 1 s，每次重试失败，打印日志；&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;@Override
+    public Integer call() throws Exception {
+        return 2;
+    }
+};
+
+Retryer&amp;lt;Integer&amp;gt; retryer = RetryerBuilder.&amp;lt;Integer&amp;gt;newBuilder()
+        .retryIfException()
+        .withStopStrategy(StopStrategies.stopAfterDelay(30,TimeUnit.SECONDS))
+        .withWaitStrategy(WaitStrategies.incrementingWait(3, TimeUnit.SECONDS,1,TimeUnit.SECONDS))
+        .withAttemptTimeLimiter(AttemptTimeLimiters.&amp;lt;Integer&amp;gt;fixedTimeLimit(3,TimeUnit.SECONDS))
+        .withRetryListener(new RetryListener() {
+            @Override
+            public &amp;lt;V&amp;gt; void onRetry(Attempt&amp;lt;V&amp;gt; attempt) {
+                if (attempt.hasException()){
+                    attempt.getExceptionCause().printStackTrace();
+                }
+            }
+        })
+        .build();
+try {
+    retryer.call(task);
+} catch (ExecutionException e) {
+    e.printStackTrace();
+} catch (RetryException e) {
+    e.printStackTrace();
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h5 id=&quot;主要接口介绍&quot;&gt;主要接口介绍：&lt;/h5&gt;
+&lt;p&gt;Attempt：一次执行任务；&lt;/p&gt;
+
+&lt;p&gt;AttemptTimeLimiter：单次任务执行时间限制（如果单次任务执行超时，则终止执行当前任务）；&lt;/p&gt;
+
+&lt;p&gt;BlockStrategies：任务阻塞策略（通俗的讲就是当前任务执行完，下次任务还没开始这段时间做什么……），默认策略为：BlockStrategies.THREAD_SLEEP_STRATEGY 也就是调用 Thread.sleep(sleepTime);&lt;/p&gt;
+
+&lt;p&gt;RetryException：重试异常；&lt;/p&gt;
+
+&lt;p&gt;RetryListener：自定义重试监听器，可以用于异步记录错误日志；&lt;/p&gt;
+
+&lt;p&gt;StopStrategy：停止重试策略，提供三种：&lt;/p&gt;
+
+&lt;p&gt;StopAfterDelayStrategy ：设定一个最长允许的执行时间；比如设定最长执行10s，无论任务执行次数，只要重试的时候超出了最长时间，则任务终止，并返回重试异常RetryException；
+NeverStopStrategy ：不停止，用于需要一直轮训知道返回期望结果的情况；
+StopAfterAttemptStrategy ：设定最大重试次数，如果超出最大重试次数则停止重试，并返回重试异常；
+WaitStrategy：等待时长策略（控制时间间隔），返回结果为下次执行时长：&lt;/p&gt;
+
+&lt;p&gt;FixedWaitStrategy：固定等待时长策略；
+RandomWaitStrategy：随机等待时长策略（可以提供一个最小和最大时长，等待时长为其区间随机值）
+IncrementingWaitStrategy：递增等待时长策略（提供一个初始值和步长，等待时间随重试次数增加而增加）
+ExponentialWaitStrategy：指数等待时长策略；
+FibonacciWaitStrategy ：Fibonacci 等待时长策略；
+ExceptionWaitStrategy ：异常时长等待策略；
+CompositeWaitStrategy ：复合时长等待策略；&lt;/p&gt;
+
+&lt;p&gt;参考：
+http://lintrip.com/2016/05/27/guava-retry/&lt;/p&gt;
+
+&lt;h4 id=&quot;解决本文提出的问题&quot;&gt;解决本文提出的问题&lt;/h4&gt;
+&lt;p&gt;看了2大杀器，再来实现本文上面的需求，就简单多了。不做赘述，直接看核心逻辑。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;if (submitCheck() {
+    checkResult();
+}
+
+ public static boolean submitCheck() {
+    try {
+        
+        StringBuilder urlBuilder = new StringBuilder(submitCheckUrl);
+        
+        WebApiResponse result = RestUtil.getWithRetry(urlBuilder.toString(),WebApiResponse.class);
+        if (result.getCode() == 1)
+            return false;
+
+    } catch (Throwable e) {
+        LOG.error(&quot;submitCheck failed,skip job checking&quot; , e);
+        return false;
+    }
+    return true;
+    }
+    
+ public static boolean checkResult() {
+    try {
+
+        StringBuilder urlBuilder =new StringBuilder(checkUrl);
+        WebApiResponse result = getDQCResultWithRetry(urlBuilder.toString(),WebApiResponse.class);
+        if (result != null &amp;amp;&amp;amp; result.getCode() == 0) {
+            Map&amp;lt;String, List&amp;lt;RuleDO&amp;gt;&amp;gt; data = (Map&amp;lt;String, List&amp;lt;RuleDO&amp;gt;&amp;gt;) result.getData();
+            if (data.get(&quot;checkFailedList&quot;).size() &amp;gt; 0) {
+                checkPass = false;
+                LOG.warn(JSON.toJSONString(jobIo) + &quot; checkFailedList&quot; + JSON.toJSONString(data.get(&quot;checkFailedList&quot;)));
+            } else if (data.get(&quot;notCompletedList&quot;).size() &amp;gt; 0) {
+                checkPass = false;
+                NotifyUtil.callTelephone(notifyTel,&quot;规则校验超时&quot;);
+
+            }
+         else {
+            LOG.warn(&quot;Not success to call &quot; + urlBuilder.toString() + &quot;,call result:&quot; + result);
+            return true;
+        }
+    }
+    } catch (Throwable e) {
+        LOG.error(&quot;checkResult failed,skip checking&quot;,e);
+        return true;
+    }
+return checkPass;
+}
+
+ static Predicate&amp;lt;WebApiResponse&amp;gt; notCompletedPredicate = input -&amp;gt; {
+        Map&amp;lt;String, List&amp;lt;RuleDO&amp;gt;&amp;gt; data = (Map&amp;lt;String, List&amp;lt;RuleDO&amp;gt;&amp;gt;) input.getData();
+        if (data.get(&quot;notCompletedList&quot;).size() &amp;gt; 0)
+            return false;
+        return true;
+    };
+
+    public static WebApiResponse getDQCResultWithRetry(String url, Class&amp;lt;WebApiResponse&amp;gt; clazz) throws IOException {
+        Retryer&amp;lt;WebApiResponse&amp;gt; retryer = RetryerBuilder.&amp;lt;WebApiResponse&amp;gt;newBuilder()
+                .retryIfResult(Predicates.not(notCompletedPredicate))
+                .retryIfExceptionOfType(IOException.class)
+                .withStopStrategy(new DQCStopStrategy())
+                .withWaitStrategy(WaitStrategies.fixedWait(30, TimeUnit.SECONDS))
+                .withRetryListener(new DQCAlertListener())
+                .build();
+
+        try {
+            return retryer.call(() -&amp;gt; get(url, clazz));
+        } catch (ExecutionException e) {
+            throw new IOException(e);
+        } catch (RetryException e) {
+            throw new IOException(e);
+        }
+    }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name></name></author><summary type="html">提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。</summary></entry><entry><title type="html">谈谈代码自动生成</title><link href="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html" rel="alternate" type="text/html" title="谈谈代码自动生成" /><published>2018-08-22T00:00:00+08:00</published><updated>2018-08-22T00:00:00+08:00</updated><id>/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90</id><content type="html" xml:base="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html">&lt;h4 id=&quot;由lombok说开去&quot;&gt;由Lombok说开去&lt;/h4&gt;
+&lt;p&gt;众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。&lt;/p&gt;
+
+&lt;p&gt;本文不打算深入讲解Lombok的详细用法，仅做入门展示特性。&lt;/p&gt;
+&lt;h5 id=&quot;生成gettersetter方法&quot;&gt;生成getter，setter方法&lt;/h5&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;@Data
+public class User { 
+    private String id;
+    private String name; 
+    private Integer age; 
+    
+} 
+public static void main(String[] args){ 
+ User user = new User();
+    user.setId(&quot;1&quot;);
+    user.setName(&quot;name&quot;);
+    user.setAge(1);
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;相比常规的书写java bean，是不是清爽很多？就凭借这一点，笔者就开始试用了。如果在类加上标注@Accessors(chain = true) 还可以支持链式调用。&lt;/p&gt;
+&lt;h5 id=&quot;代码清场&quot;&gt;代码清场&lt;/h5&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public static void main(String[] args) throws IOException {  
+    @Cleanup
+    InputStream in = new FileInputStream(args[0]);  
+    @Cleanup 
+    OutputStream out = new FileOutputStream(args[1]);  
+    byte[] b = new byte[10000];  
+    while (true) {  
+      int r = in.read(b);  
+      if (r == -1) break;  
+      out.write(b, 0, r);  
+    }  
+  }  
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;@Cleanup 之于代码的作用类似于垃圾回收之于jvm运行时，干的是幕后清场的重要琐事。如果觉得作用不够明显，可以看下常规的书写代码有多烦。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public static void main(String[] args) throws IOException {  
+    InputStream in = new FileInputStream(args[0]);  
+    try {  
+      OutputStream out = new FileOutputStream(args[1]);  
+      try {  
+        byte[] b = new byte[10000];  
+        while (true) {  
+          int r = in.read(b);  
+          if (r == -1) break;  
+          out.write(b, 0, r);  
+        }  
+      } finally {  
+        if (out != null) {  
+          out.close();  
+        }  
+      }  
+    } finally {  
+      if (in != null) {  
+        in.close();  
+      }  
+    }  
+  }  
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;值得注意的是：如果你的代码中出现了异常，那么会触发cleanup方法抛出异常，导致把原始异常吞掉，但是如果说你是在调用close方法的时候出了异常，那么Cleanup这个annotation是不会把异常吞掉的。 官方暂时也没法解决。&lt;/p&gt;
+&lt;h5 id=&quot;公共方法实现&quot;&gt;公共方法实现&lt;/h5&gt;
+&lt;p&gt;主要包含以下方法&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;@ToString，&lt;/li&gt;
+  &lt;li&gt;@EqualsAndHashCode，&lt;/li&gt;
+  &lt;li&gt;@NoArgsConstructor,&lt;/li&gt;
+  &lt;li&gt;@RequiredArgsConstructor&lt;/li&gt;
+  &lt;li&gt;@AllArgsConstructor
+```
+import lombok.ToString;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;@ToString(exclude=”id”)
+public class ToStringExample {
+  private static final int STATIC_VAR = 10;
+  private String name;
+  private Shape shape = new Square(5, 10);
+  private String[] tags;
+  private int id;&lt;/p&gt;
+
+&lt;p&gt;public String getName() {
+    return this.getName();
+  }&lt;/p&gt;
+
+&lt;p&gt;@ToString(callSuper=true, includeFieldNames=true)
+  public static class Square extends Shape {
+    private final int width, height;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public Square(int width, int height) {
+  this.width = width;
+  this.height = height;
+}   } } ``` 了解了Lombok的富有魔性的语法，也知道了她的另一个弊端：强大的同时也给调试带来了障碍。现在我们关注她的另一面：由于对现有标准的不遵守，给我们编码规范带来的改变。标注注解在Lombok中不仅仅起着元数据的作用，更是起到了命令驱动编程的作用,还有一点就是提供了动态代理的替代方案。接下来我们把重点放在探究其工作原理。 #### Lombok工作原理 ##### 了解下 Annotation Annotation 是JDk提供用来为程序元素提供设置元数据的方法。所谓元数据就是描述数据的数据，在大数据时代，这个概念相信听到得不要太多。所谓程序元素，包括修饰包、类、构造器、方法、成员变量、参数、局部变量等。元数据的信息被存储在Annotation的“name=value”中。 注解也有元注解的概念，即注解其他注解的注解，jdk提供的4个基本的元注解分别是 - @Target 标明注解的修饰目标 - @Retention 标明注解的生命周期 - @Documented 表明制作javadoc时，是否将注解信息加入文档 - @Inherited 允许子类继承父类的注解 -  定义一个注解： ``` @Target({ElementType.TYPE}) @Retention(RetentionPolicy.SOURCE) public @interface AutoCoding {
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;}&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+@Target 只有一个value属性，类型为枚举类型ElementType。ElementType 声明如下：
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;/* @author  Joshua Bloch&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;@since 1.5&lt;/li&gt;
+  &lt;li&gt;@jls 9.6.4.1 @Target&lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;@jls 4.1 The Kinds of Types and Values
+ */
+public enum ElementType {
+ /** Class, interface (including annotation type), or enum declaration */
+ TYPE,&lt;/p&gt;
+
+    &lt;p&gt;/** Field declaration (includes enum constants) */
+ FIELD,&lt;/p&gt;
+
+    &lt;p&gt;/** Method declaration */
+ METHOD,&lt;/p&gt;
+
+    &lt;p&gt;/** Formal parameter declaration */
+ PARAMETER,&lt;/p&gt;
+
+    &lt;p&gt;/** Constructor declaration */
+ CONSTRUCTOR,&lt;/p&gt;
+
+    &lt;p&gt;/** Local variable declaration */
+ LOCAL_VARIABLE,&lt;/p&gt;
+
+    &lt;p&gt;/** Annotation type declaration */
+ ANNOTATION_TYPE,&lt;/p&gt;
+
+    &lt;p&gt;/** Package declaration */
+ PACKAGE,&lt;/p&gt;
+
+    &lt;p&gt;/**&lt;/p&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Type parameter declaration
+  *&lt;/li&gt;
+      &lt;li&gt;@since 1.8
+  */
+ TYPE_PARAMETER,&lt;/li&gt;
+    &lt;/ul&gt;
+
+    &lt;p&gt;/**&lt;/p&gt;
+    &lt;ul&gt;
+      &lt;li&gt;Use of a type
+  *&lt;/li&gt;
+      &lt;li&gt;@since 1.8
+  */
+ TYPE_USE
+}
+        &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; @Retention 指明该注解的生命周期，注解的值是 enum 类型的 RetentionPolicy，包括以下几种情况：
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;        &lt;/div&gt;
+        &lt;p&gt;public enum RetentionPolicy {
+ /**&lt;/p&gt;
+      &lt;/li&gt;
+      &lt;li&gt;注解只保留在源文件，当Java文件编译成class文件的时候，注解被遗弃.&lt;/li&gt;
+      &lt;li&gt;这意味着：Annotation仅存在于编译器处理期间，编译器处理完之后，该Annotation就没用了
+  */
+ SOURCE,&lt;/li&gt;
+    &lt;/ul&gt;
+
+    &lt;p&gt;/**&lt;/p&gt;
+    &lt;ul&gt;
+      &lt;li&gt;注解被保留到class文件，但jvm加载class文件时候被遗弃，这是默认的生命周期.
+  */
+ CLASS,&lt;/li&gt;
+    &lt;/ul&gt;
+
+    &lt;p&gt;/**&lt;/p&gt;
+    &lt;ul&gt;
+      &lt;li&gt;注解不仅被保存到class文件中，jvm加载class文件之后，仍然存在，&lt;/li&gt;
+      &lt;li&gt;保存到class对象中，可以通过反射来获取
+  */
+ RUNTIME&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#### Lombok 处理流程
+![flow](https://ask.qcloudimg.com/http-save/yehe-1177371/vvmecue5dt.png?imageView2/2/w/1620)
+，jdk7及之后采用了 [JSR269API](http://openjdk.java.net/jeps/117）
+Lombok本质上就是一个实现了“JSR 269 API”的程序。在使用javac的过程中，它产生作用的具体流程如下：
+
+1. javac对源代码进行分析，生成了一棵抽象语法树（AST）
+2. 运行过程中调用实现了“JSR 269 API”的Lombok程序
+3. 对第一步骤得到的AST进行处理，找到@Data注解所在类对应的语法树（AST），然后修改该语法树（AST），增加getter和setter方法定义的相应树节点
+4. javac使用修改后的抽象语法树（AST）生成字节码文件，即给class增加新的节点（代码块）
+##### Annotation处理
+jdk7之前访问和处理Annotation的工具统称APT（ Annotation Processing Tool），其作用如下：
+- APT是一种处理注释的工具,它对源代码文件进行检测，并找出源文件中所包含的Annotation信息，然后针对Annotation信息进行额外的处理。
+- APT处理器在处理Annotation时可以根据源文件中的Annotation生成额外的源文件和其它的文件(文件具体内容由Annotation处理器的编写者决定),APT还会编译生成的源文件和原来的源文件，将它们一起生成class文件.使用APT主要的目的是简化开发者的工作量。
+- 因为APT可以编译程序源代码的同时，生成一些附属文件(比如源文件、类文件、程序发布描述文件等)，这些附属文件的内容也都是与源代码相关的，换句话说，使用APT可以代替传统的对代码信息和附属文件的维护工作。
+- APT的相关api都在com.sun.mirror 包下，在jdk7及之后，apt的相关api就被废除了，代替的是JSR269。JSR269的api在 javax.annotation.processing and javax.lang.model包下。换句话说JSR269是对APT的封装，并且集成到了javac中。接下来我们只说JSR269。
+
+我们都知道处理@Retention(RetentionPolicy.RUNTIME)的注解，使用的是反射技术。那么处理@Retention(RetentionPolicy.SOURCE）使用的是什么技术呢？这就需要了解标注处理器了。
+为了更深入了解通过Annotation处理生成代码的原理，本文实现一个自动生成gettet和setter的标注处理器。
+1. 先定义一个类，并加上文章上面定义的@AutoCoding
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;@AutoCoding
+public class Student {
+    private String id;
+    private String name;
+    private Integer age;
+}&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;2. 实现Processor类接口
+AbstractProcessor是Processor类接口的抽象实现类，然后需要重载以下主要方法即可。
+-  init 处理环境类初始化Processor类
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;//注解处理器可用此创建新文件（源文件、类文件、辅助资源文件）。由此方法创建的源文件和类文件将由管理它们的工具（javac）处理。
+private Filer filer;
+//注解处理器用此来报告错误消息、警告和其他通知的方式。可以为它的方法传递元素、注解、注解值，以提供消息的位置提示
+private Messager messager;
+
+@Override
+public synchronized void init(ProcessingEnvironment processingEnv) {
+    super.init(processingEnv);
+    //初始化Filer和Messager
+    this.filer = processingEnv.getFiler();
+    this.messager = processingEnv.getMessager();
+} ``` - getSupportedOptions()方法：获取通过注解@SupportedOptions设置的可支持的输入选项值（-A参数），具体实现如下： ```  @Override
+public SourceVersion getSupportedSourceVersion() {
+    return SourceVersion.latestSupported();
+} ```
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;getSupportedAnnotationTypes方法
+定义注解处理器注册到哪些注解上
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  @Override
+  public Set&amp;lt;String&amp;gt; getSupportedAnnotationTypes() {
+      Set&amp;lt;String&amp;gt; annotataions = new LinkedHashSet&amp;lt;String&amp;gt;();
+      annotataions.add(AutoCoding.class.getCanonicalName());
+      return annotataions;
+  }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+  &lt;li&gt;核心处理方法process
+    &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;@Override
+  public boolean process(Set&amp;lt;? extends TypeElement&amp;gt; annotations, RoundEnvironment roundEnv) {
+      Set&amp;lt;? extends Element&amp;gt; genElements = roundEnv.getElementsAnnotatedWith(AutoCoding.class);
+      for (Element e : genElements) {
+          messager.printMessage(Diagnostic.Kind.NOTE, e.toString());
+          System.out.println(&quot;&amp;gt;&amp;gt;&amp;gt; &quot; + e.getSimpleName());
+          AutoCoding autoCoding = e.getAnnotation(AutoCoding.class);
+          String className = e.getSimpleName().toString();
+          //获取所有的方法元素
+          List&amp;lt;? extends Element&amp;gt; genElementAlls = e.getEnclosedElements();
+
+          TypeSpec.Builder typeBuilder = TypeSpec.classBuilder(className+&quot;Auto&quot;)//HelloWorld是类名
+                  .addModifiers(Modifier.PUBLIC);
+
+          for (Element ele : genElementAlls) {
+              if (ele.getKind() == ElementKind.FIELD) {
+                  VariableElement varELe = (VariableElement) ele;
+                  String fieldName = varELe.getSimpleName().toString();
+                  TypeName type = TypeName.get(ele.asType());
+                  Modifier [] modifiers =new Modifier[varELe.getModifiers().size()];
+                  varELe.getModifiers().toArray(modifiers);
+                  FieldSpec field = FieldSpec.builder(type, fieldName)
+                          .addModifiers(modifiers)
+                          .build();
+
+                  typeBuilder.addField(field);
+                  ParameterSpec parameterSpec=ParameterSpec.builder(type, fieldName)
+                          .build();
+                  String fieldType = varELe.asType().toString();
+                  MethodSpec setter = MethodSpec.methodBuilder(&quot;set&quot; + fieldName.substring(0,1).toUpperCase()+fieldName.substring(1))
+                          .addModifiers(Modifier.PUBLIC)
+                          .addParameter(parameterSpec)
+                          .addStatement(&quot;this.&quot; + fieldName + &quot;=&quot; + fieldName)
+                          .build();
+                  typeBuilder.addMethod(setter); //在类中添加方法
+                  MethodSpec getter = MethodSpec.methodBuilder(&quot;get&quot; + fieldName.substring(0,1).toUpperCase()+fieldName.substring(1))
+                          .addModifiers(Modifier.PUBLIC)
+                          .returns(type)
+                          .addStatement(&quot;return this.&quot; + fieldName)
+                          .build();
+                  typeBuilder.addMethod(getter);
+              }
+          }
+          TypeSpec typeSpec = typeBuilder.build();
+          JavaFile javaFile = JavaFile.builder(&quot;anotation&quot;, typeSpec)
+                  .build();
+          try {
+              javaFile.writeTo(filer);
+          } catch (IOException e1) {
+              e1.printStackTrace();
+          }
+      }
+      return true;
+  }
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;执行注解处理器&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;注解处理器编写完成后，需要使用java提供的工具javac来执行才能真正的起作用。下面介绍一下javac工具相关注解的选项。&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;用法：javac &lt;选项&gt; &lt;源文件&gt;&lt;/源文件&gt;&lt;/选项&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;其中，注解可能乃至选项包括：&lt;/p&gt;
+
+&lt;p&gt;-cp &lt;路径&gt; 指定查找用户类文件和注释处理程序的位置。&lt;/路径&gt;&lt;/p&gt;
+
+&lt;p&gt;-proc:{none,only} 控制是否执行注释处理和/或编译。-proc:none表示编译期不执行注解处理器； -proc:only表示只执行注解处理器，不进行任何注解之后的编译。&lt;/p&gt;
+
+&lt;p&gt;-processor &lt;class1&gt;[,&lt;class2&gt;,&lt;class3&gt;…]要运行的注释处理程序的名称；绕过默认的搜索进程。&lt;/class3&gt;&lt;/class2&gt;&lt;/class1&gt;&lt;/p&gt;
+
+&lt;p&gt;-processorpath &lt;路径&gt;        指定查找注释处理程序的位置。如果未指定，将使用-cp指定的路径。&lt;/路径&gt;&lt;/p&gt;
+
+&lt;p&gt;-d &lt;目录&gt; 指定存放生成的类文件的位置。&lt;/目录&gt;&lt;/p&gt;
+
+&lt;p&gt;-s &lt;目录&gt; 指定存放生成的源文件的位置。&lt;/目录&gt;&lt;/p&gt;
+
+&lt;p&gt;-Akey[=value] 传递给注释处理程序的选项。&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;执行编译&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;javac -d target src/main/java/anotation/*.java -cp ~/.m2/repository/com/squareup/javapoet/1.11.1/javapoet-1.11.1.jar
+这一步主要是生成了processor的class文件&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;执行processor创建代码生成&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;javac -d target -processor anotation.StudentAutoCodingProcessor -s src/main/java/ src/main/java/anotation/ -cp ～/.m2/repository/com/squareup/javapoet/1.11.1/javapoet-1.11.1.jar:target
+这一步即生成了StudentAuto类：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;public class StudentAuto {
+    private String id;
+    private String name;
+    private Integer age;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;代码生成&quot;&gt;代码生成&lt;/h4&gt;
+&lt;p&gt;在process方法中我用到了 javapoet 类库创建代码，是不是觉得很规范，很酷？望词生意，她所传达的意思就是写代码像诗人作诗一样肆意洒脱。只不过他的目标是机器来代替人来写具体的代码，写什么是人来规范。下面简单介绍下javapoet。
+javapoet里面常用的几个类：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;MethodSpec 代表一个构造函数或方法声明。&lt;/li&gt;
+  &lt;li&gt;TypeSpec 代表一个类，接口，或者枚举声明。&lt;/li&gt;
+  &lt;li&gt;FieldSpec 代表一个成员变量，一个字段声明。&lt;/li&gt;
+  &lt;li&gt;JavaFile包含一个顶级类的Java文件。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;按照惯例，写demo还得请来HelloWorld。&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;private static void generateHelloworld() throws IOException {
+        MethodSpec main = MethodSpec.methodBuilder(&quot;main&quot;)
+                .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+                .addParameter(String[].class, &quot;args&quot;)
+                .addCode(&quot;System.out.println(\&quot;Hello World\&quot;);\n&quot;)
+                .build();
+        TypeSpec typeSpec = TypeSpec.classBuilder(&quot;HelloWorld&quot;)
+                .addModifiers(Modifier.FINAL, Modifier.PUBLIC)
+                .addMethod(main).build();
+        JavaFile javaFile = JavaFile.builder(&quot;com.example.helloworld&quot;, typeSpec).build();
+        javaFile.writeTo(System.out);
+    }
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;自动生成的代码如下：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;package&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;com&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;example&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;helloworld&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;java&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lang&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;final&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;HelloWorld&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nf&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;println&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;Hello World&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;好了，poet的内容实在太多，师父领进门，修行靠个人，点到为止，更多内容戳&lt;a href=&quot;https://github.com/square/javapoet&quot;&gt;»&amp;gt;&lt;/a&gt;。
+到此，文章是写完了，但是思考还木有停止：技术的发展是让程序员少写或者不写代码，jdk和众多第三方库花了很大的力气也是在朝着这个方向努力，在上面的例子我们也看到了这个结果，但是并没有承诺让程序员少看代码。这不得不让人怀疑他们努力的方向。可能是机器真的需要人来监督。&lt;/p&gt;</content><author><name></name></author><summary type="html">由Lombok说开去 众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。</summary></entry><entry><title type="html">Apples</title><link href="/2018/08/21/apples.html" rel="alternate" type="text/html" title="Apples" /><published>2018-08-21T00:00:00+08:00</published><updated>2018-08-21T00:00:00+08:00</updated><id>/2018/08/21/apples</id><content type="html" xml:base="/2018/08/21/apples.html">&lt;p&gt;An apple is a sweet, edible fruit produced by an apple tree.&lt;/p&gt;
 
 &lt;p&gt;Apple trees are cultivated worldwide, and are the most widely grown species in
 the genus Malus. The tree originated in Central Asia, where its wild ancestor,
