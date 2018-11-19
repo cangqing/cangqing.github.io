@@ -2,8 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="/assets/css/styles.css">
+    <script src="/assets/js/mermaid.min-8.0.0-rc.8.js"></script>
     <title>Blog</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
   </head>
   <body>
     <nav>
@@ -16,26 +17,38 @@
   
 </nav>
 
-    <h1>Latest Posts</h1>
-
+    <h3>Latest Posts</h3>
 <ul>
   
     <li>
-      <h2><a href="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html">用swagger生成api接口文档</a></h2>
+      <h4><a href="/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB.html">如何通过sql解析的方式维护任务依赖关系？</a></h4>
+      <p><h4 id="问题描述">问题描述：</h4>
+<p>调度系统中常见的任务类型是hive sql，spark sql等，这些任务根据sql 的输入和输出表自发的建立起一套先后次序，自然任务之间也就有了依赖关系。本文描述在系统设计中如何维护这些依赖关系：</p>
+<ul>
+  <li>如何存储依赖关系？</li>
+  <li>如何维护依赖关系？</li>
+  <li>如何进行环检测？</li>
+</ul>
+
+</p>
+    </li>
+  
+    <li>
+      <h4><a href="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html">用swagger生成api接口文档</a></h4>
       <p><h4 id="导读">导读</h4>
 
 </p>
     </li>
   
     <li>
-      <h2><a href="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html">如何优雅的请求http</a></h2>
+      <h4><a href="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html">如何优雅的请求http</a></h4>
       <p><p>提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。</p>
 
 </p>
     </li>
   
     <li>
-      <h2><a href="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html">谈谈代码自动生成</a></h2>
+      <h4><a href="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html">谈谈代码自动生成</a></h4>
       <p><h4 id="由lombok说开去">由Lombok说开去</h4>
 <p>众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。</p>
 
@@ -43,14 +56,14 @@
     </li>
   
     <li>
-      <h2><a href="/2018/08/21/apples.html">Apples</a></h2>
+      <h4><a href="/2018/08/21/apples.html">Apples</a></h4>
       <p><p>An apple is a sweet, edible fruit produced by an apple tree.</p>
 
 </p>
     </li>
   
     <li>
-      <h2><a href="/2018/08/20/bananas.html">Bananas</a></h2>
+      <h4><a href="/2018/08/20/bananas.html">Bananas</a></h4>
       <p><p>A banana is an edible fruit – botanically a berry – produced by several kinds
 of large herbaceous flowering plants in the genus Musa.</p>
 
@@ -58,6 +71,12 @@ of large herbaceous flowering plants in the genus Musa.</p>
     </li>
   
 </ul>
+ <div class="mermaid">
+  graph LR
+      A --- B
+      B-->C[fa:fa-ban forbidden]
+      B-->D(fa:fa-spinner);
+  </div>
 
   </body>
 </html>

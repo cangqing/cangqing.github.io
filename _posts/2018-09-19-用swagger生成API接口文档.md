@@ -34,6 +34,17 @@ swagger是一个API框架，号称世界上最流行的API工具。它提供了A
     <artifactId>swagger-annotations</artifactId>
     <version>1.5.6</version>
 </dependency>
+<dependency>
+    <groupId>io.springfox</groupId>
+    <artifactId>springfox-staticdocs</artifactId>
+    <version>2.6.1</version>
+</dependency>
+<dependency>
+    <groupId>io.github.swagger2markup</groupId>
+    <artifactId>swagger2markup</artifactId>
+    <version>1.3.1</version>
+</dependency>
+
 ```
         
 ```
