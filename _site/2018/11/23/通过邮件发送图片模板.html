@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="/assets/js/mermaid.min-8.0.0-rc.8.js"></script>
+    <title>通过邮件发送图片模板</title>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+  </head>
+  <body>
+    <nav>
+  
+    <a href="/" >Home</a>
+  
+    <a href="/blog.html" >Blog</a>
+  
+    <a href="/about.html" >About</a>
+  
+</nav>
+
+    <h3>通过邮件发送图片模板</h3>
+<p>23 Nov 2018 - cangqing</p>
+
+<p>有一种场景需要程序通过邮件发送模板申请表。通常的做法是维护一个html模板，然后通过模板引擎渲染最终结果发送。这种方式虽然也可行，但是不够直观。本文介绍另一种方式：基于图片模板渲染！</p>
+
+<p>大致效果是酱紫的：
+<a href="/assets/images/img_rendered.jpeg">效果图</a></p>
+
+<p>为实现以上效果需要经过以下几个步骤：</p>
+
+<h4 id="制作图片模板">制作图片模板</h4>
+<p>调整图片长、宽和每行、列的间距，方便后续内容填充。
+<a href="/assets/images/img_template.jpeg">图像模板</a></p>
+
+<h4 id="渲染图像">渲染图像</h4>
+<p>ImageUtil.java代码</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>   public static String drawStringUsingTemplateImage(Map&lt;String, String&gt; watermark, String creator) throws IOException {
+        String outFileName;
+        URL imgUrl = ImageUtil.class.getResource("/drc_template.png");
+        Image image = ImageIO.read(imgUrl);
+        int height = image.getHeight(null);
+        int width = image.getWidth(null);
+        BufferedImage bufferedImage = new BufferedImage(width, height,
+                BufferedImage.TYPE_INT_RGB);
+
+        Graphics2D graphics = bufferedImage.createGraphics();
+        graphics.drawImage(image, 0, 0, width, height, null);
+        graphics.setColor(Color.RED);
+        Font font=loadFont("/华文宋体.ttf", 40);
+        graphics.setFont(font);
+        String department = watermark.getOrDefault("department", "数据部门");
+        graphics.drawString(department, 1100, 130);
+        String topic = watermark.get("topic");
+        graphics.drawString(topic, 1000, 210);
+        String description = watermark.getOrDefault("description", "mysql binlog to hive");
+        graphics.drawString(description, 900, 280);
+        Boolean hasTablePartition = watermark.containsKey("hasTablePartition");
+        graphics.drawString("否", 1100, 350);
+        graphics.dispose();
+        String format = "png";
+        outFileName = creator + "." + format;
+        ImageIO.write(bufferedImage, format, new File(outFileName));
+        return outFileName;
+    }
+</code></pre></div></div>
+
+<p>这个过程有几个要点：</p>
+<ol>
+  <li>通过BufferedImage加载图像模板；</li>
+  <li>通过Graphics2D设置字体绘图，下文介绍；</li>
+  <li>绘制每行的内容，主要是设置好每行的偏移量位置；</li>
+  <li>另存为新的图像。</li>
+</ol>
+
+<h4 id="设置字体">设置字体</h4>
+
+<p>这一步主要解决某些系统，比如常用的简版centos docker镜像系统没有相关中文字体，导致渲染汉字的时候出现乱码。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    public static Font loadFont(String fontFileName, float fontSize) throws IOException, FontFormatException {
+        InputStream inputStream = ImageUtil.class.getResourceAsStream(fontFileName);
+        Font dynamicFont = Font.createFont(Font.TRUETYPE_FONT, inputStream);
+        Font dynamicFontPt = dynamicFont.deriveFont(fontSize);
+        inputStream.close();
+        return dynamicFontPt;
+    }
+    
+</code></pre></div></div>
+<p>这里下载华文宋体文件为例，创建自己的字体和大小。</p>
+
+<h4 id="邮件发送">邮件发送</h4>
+
+<p>这里考虑到邮件的直观性，不可能通过附件的形式发送，这里需要解决如何以图片正文的形式展示。</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    public void sendDRCTemplateMails(@NonNull String subject, @NonNull String imageTemplate,@NonNull String[] receiverList, @NonNull String[] ccList) {
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+            helper.setFrom("notification@mycompany.com");
+            for (String receiver : receiverList) {
+                helper.addTo(receiver);
+            }
+            for (String receiver : ccList) {
+                helper.addCc(receiver);
+            }
+            helper.setSubject(subject);
+            String cid=imageTemplate;
+            helper.setText("<span class="nt">&lt;html&gt;&lt;body&gt;&lt;img</span> <span class="na">src=</span><span class="s">\"cid:"+cid+"\"</span> <span class="nt">&gt;&lt;/body&gt;&lt;/html&gt;</span>", true);
+            FileSystemResource file = new FileSystemResource(new File(imageTemplate));
+            helper.addInline(cid, file);
+            mailSender.send(mimeMessage);
+        } catch (Exception e) {
+            logger.error("send email failed",e);
+        }
+    }
+    
+</code></pre></div></div>
+<p>这里以spring-boot开发为例介绍主要要点：</p>
+
+<ol>
+  <li>引入mail工具包
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    &lt;dependency&gt;
+         &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+         &lt;artifactId&gt;spring-boot-starter-mail&lt;/artifactId&gt;
+     &lt;/dependency&gt;
+</code></pre></div>    </div>
+    <p>2.设置邮件配置</p>
+
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> #email
+ spring.mail.default-encoding=UTF-8
+ spring.mail.host=mail.mycompany.com
+ #端口
+ spring.mail.port=25
+ #协议
+ spring.mail.protocol=smtp
+ #发送者的邮箱账号
+ spring.mail.username=notification@mycompany.com
+ #发送者的邮箱密码
+ spring.mail.password=tgAZe8MILi
+
+</code></pre></div>    </div>
+  </li>
+  <li>设置邮件图片正文的cid为drawStringUsingTemplateImage生成的新图像。</li>
+</ol>
+
+<h4 id="完善功能">完善功能</h4>
+<ol>
+  <li>丰富图文展示</li>
+  <li>支持更多的字体</li>
+  <li>字体展示位置根据长度和宽度自动计算对齐。</li>
+</ol>
+
+<h4 id="reference">Reference</h4>
+<p><a href="http://blog.didispace.com/springbootmailsender/">Spring Boot中使用JavaMailSender发送邮件</a></p>
+
+
+  </body>
+</html>
