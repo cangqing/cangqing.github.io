@@ -1,4 +1,316 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2018-11-23T23:40:17+08:00</updated><id>/feed.xml</id><entry><title type="html">通过邮件发送图片模板</title><link href="/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF.html" rel="alternate" type="text/html" title="通过邮件发送图片模板" /><published>2018-11-23T00:00:00+08:00</published><updated>2018-11-23T00:00:00+08:00</updated><id>/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF</id><content type="html" xml:base="/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF.html">&lt;p&gt;有一种场景需要程序通过邮件发送模板申请表。通常的做法是维护一个html模板，然后通过模板引擎渲染最终结果发送。这种方式虽然也可行，但是不够直观。本文介绍另一种方式：基于图片模板渲染！&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.8.4">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2018-11-28T14:10:55+08:00</updated><id>http://localhost:4000/feed.xml</id><entry><title type="html">如何基于django快速搭建网站搜索</title><link href="http://localhost:4000/2018/11/28/%E5%A6%82%E4%BD%95%E5%9F%BA%E4%BA%8Edjango%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA%E7%BD%91%E7%AB%99%E6%90%9C%E7%B4%A2.html" rel="alternate" type="text/html" title="如何基于django快速搭建网站搜索" /><published>2018-11-28T00:00:00+08:00</published><updated>2018-11-28T00:00:00+08:00</updated><id>http://localhost:4000/2018/11/28/%E5%A6%82%E4%BD%95%E5%9F%BA%E4%BA%8Edjango%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA%E7%BD%91%E7%AB%99%E6%90%9C%E7%B4%A2</id><content type="html" xml:base="http://localhost:4000/2018/11/28/%E5%A6%82%E4%BD%95%E5%9F%BA%E4%BA%8Edjango%E5%BF%AB%E9%80%9F%E6%90%AD%E5%BB%BA%E7%BD%91%E7%AB%99%E6%90%9C%E7%B4%A2.html">&lt;p&gt;Django是一个python语言实现的、MVC架构模式的开源web框架。Django以其优雅和简约使web应用开发变得极其容易。本文作者也是被其设计理念所折服，于是立马书写一篇，为Django的开源推广助一臂之力。在此，本文以如何搭建网站搜索为例，带领大家领略一下其魅力。&lt;/p&gt;
+
+&lt;h4 id=&quot;了解django&quot;&gt;了解Django&lt;/h4&gt;
+
+&lt;p&gt;Django is a high-level Python Web framework that encourages rapid development and clean, pragmatic design. Built by experienced developers, it takes care of much of the hassle of Web development, so you can focus on writing your app without needing to reinvent the wheel. It’s free and open source.&lt;/p&gt;
+
+&lt;p&gt;Django的主要目的是简便、快速的开发数据库驱动的网站。它强调代码复用，多个组件可以很方便的以“插件”形式服务于整个框架，Django有许多功能强大的第三方插件，你甚至可以很方便的开发出自己的工具包。这使得Django具有很强的可扩展性。它还强调快速开发和DRY(Do Not Repeat Yourself)原则。&lt;/p&gt;
+
+&lt;h4 id=&quot;django的主要模块设计&quot;&gt;Django的主要模块设计：&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;对象关系映射 (ORM,object-relational mapping)：以Python类形式定义你的数据模型，ORM将模型与关系数据库连接起来，你将得到一个非常容易使用的数据库API，同时你也可以在Django中使用原始的SQL语句。&lt;/li&gt;
+  &lt;li&gt;URL 分派：使用正则表达式匹配URL，你可以设计任意的URL，没有框架的特定限定。像你喜欢的一样灵活。
+模版系统：使用Django强大而可扩展的模板语言，可以分隔设计、内容和Python代码。并且具有可继承性。&lt;/li&gt;
+  &lt;li&gt;表单处理：你可以方便的生成各种表单模型，实现表单的有效性检验。可以方便的从你定义的模型实例生成相应的表单。&lt;/li&gt;
+  &lt;li&gt;Cache系统：可以挂在内存缓冲或其它的框架实现超级缓冲 －－ 实现你所需要的粒度。
+会话(session)，用户登录与权限检查，快速开发用户会话功能。&lt;/li&gt;
+  &lt;li&gt;国际化：内置国际化系统，方便开发出多种语言的网站。&lt;/li&gt;
+  &lt;li&gt;自动化的管理界面：不需要你花大量的工作来创建人员管理和更新内容。Django自带一个ADMIN site,类似于内容管理系统&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;关于Django的介绍，更多信息参见这里。&lt;/p&gt;
+
+&lt;h4 id=&quot;开始helloworld&quot;&gt;开始HelloWorld&lt;/h4&gt;
+
+&lt;p&gt;开始动手之前，了解下主要业务流程，通过其项目目录结构设计能够较好理解其处理过程。
+&lt;img src=&quot;/assets/images/django-flow.png&quot; alt=&quot;流程&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Django提供了完备的控制台命令，诸如用户创建项目和开发调试、测试等。使用起来超级方便，比如使用以下命令即可创建一个带有基本结构的可使用的web框架。&lt;/p&gt;
+
+&lt;h1 id=&quot;安装django&quot;&gt;安装django&lt;/h1&gt;
+&lt;p&gt;pip3 install -e django&lt;/p&gt;
+
+&lt;h1 id=&quot;创建一个project&quot;&gt;创建一个project&lt;/h1&gt;
+
+&lt;p&gt;django-admin startproject mysite&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/django-mysite.png&quot; alt=&quot;项目组织结构&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;启动服务器：
+python3 manage.py runserver
+浏览器访问http://127.0.0.1:8000&lt;/p&gt;
+
+&lt;p&gt;#在项目下增加一个app
+python3 manage.py startapp polls&lt;/p&gt;
+
+&lt;p&gt;目录变成如下结构：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/django-polls.png&quot; alt=&quot;项目组织结构&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;看到没，models.py和views.py就是模型和视图，urls.py就是url映射,settings.py是配置文件！&lt;/p&gt;
+
+&lt;h4 id=&quot;开始helloworld-1&quot;&gt;开始HelloWorld&lt;/h4&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;不用模板&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;在mysite/views.py加一个函数：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;def index(request):
+    return HttpResponse(u'Hello World')
+
+在mysite/urls.py中添加
+urlpatterns = [
+    path('index/', views.index),
+]
+在mysite/settings.py中添加
+INSTALLED_APPS = [
+    'polls',
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;刷新浏览器访问http://127.0.0.1:8000/index。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/django-demo.png&quot; alt=&quot;django demo&quot; /&gt;&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;使用模板&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;在mysite/views.py修改index函数：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;def index(request):
+    	context={'hellowho','world'}
+return render(request, 'polls/hello.html',context)
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;在polls目录下创建hello.html，路径为：
+polls/templates/polls/hello.html
+内容为：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&amp;lt;h2&amp;gt;hello &amp;lt;/h2&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;刷新浏览器即可看到效果，666！&lt;/p&gt;
+
+&lt;p&gt;搭建网站搜索
+创建全文索引，首先指定需要索引的数据模型，配置相应的分词策略准备索引创建，然后提供外部访问查询接口，并且提供关键字的高亮展示。这个过程在传统网站中实现是个很繁琐的过程，然而基于diango实现只需要简单几个步骤，怎么做到的呢？
+首先祭出几件大杀器：&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;haystack django的开源搜索框架，该框架支持Solr,Elasticsearch,Whoosh, &lt;em&gt;Xapian&lt;/em&gt;搜索引擎。&lt;/li&gt;
+  &lt;li&gt;Whoosh 一个由纯Python实现的全文搜索引擎。&lt;/li&gt;
+  &lt;li&gt;Jieba  中文分词&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;指定数据模型
+在polls/models.py中添加模型：&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+class Product(models.Model):
+    title=models.CharField(max_length=100,blank=True,verbose_name='标题')
+    mainPhoto = models.ImageField(upload_to='products',verbose_name='上传主图')
+    pub_date = models.DateTimeField('发布日期',default = timezone.now)
+    content=UEditorField(u'内容',width=600, height=300, toolbars=&quot;full&quot;, imagePath=&quot;images/&quot;, filePath=&quot;&quot;, upload_settings={&quot;imageMaxSize&quot;:1204000},
+ settings={},blank=True)
+
+    def __str__(self):
+        return self.title
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;定义了一个Product，主要属性：标题，封面图，发布日期，产品介绍（支持富文本）。&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;添加Product
+进入admin 后台管理，增加几条Product记录
+&lt;img src=&quot;/assets/images/django-product.png&quot; alt=&quot;添加记录&quot; /&gt;&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;创建索引&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;安装haystack，并添加到mysite/settings.py：
+INSTALLED_APPS = [
+ ‘haystack’,
+  ‘polls’,
+]&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;在项目根目录mysite下面创建索引目录whoosh_index（默认名字），并在mysite/settings.py中配置分词引擎，这里先用自带的英文分词引擎whoose。&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',
+        'PATH': os.path.join(os.path.dirname(__file__), 'whoosh_index'),
+    },
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;在polls app下面创建search_indexes.py文件（默认文件名）:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;import datetime
+from haystack import indexes
+from .models import Product
+
+class ProductIndex(indexes.SearchIndex, indexes.Indexable):
+    #如果使用一个字段设置了document=True，则一般约定此字段名为text，索引的数据都在text字段里了
+    text = indexes.CharField(document=True, use_template=True)
+    #包含id属性
+    id = indexes.IntegerField(model_attr='id')
+
+    def get_model(self):
+        return Product
+
+    def index_queryset(self, using=None):
+        &quot;&quot;&quot;Used when the entire index for model is updated.&quot;&quot;&quot;
+        return self.get_model().objects.all()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;创建数据模板：
+在app polls下面创建product_text.txt文件，如果路径目录不存在，创建之。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;templates/search/indexes/polls/product_text.txt          
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;内容为：&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ object.title }
+{ object.content }                                        
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;这个数据模板的作用是对Product.title, Product.content这两个字段建立索引，当检索的时候会对这些字段做全文检索。&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;创建搜索展现模板
+在app polls下面创建templates/search/search.html&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/search-code.png&quot; alt=&quot;搜索代码模板&quot; /&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &amp;lt;form class=&quot;navbar-form navbar-right&quot; role=&quot;search&quot; method=&quot;get&quot; id=&quot;searchform&quot; action=&quot;{ url 'haystack_search' }&quot;&amp;gt;
+        &amp;lt;input type=&quot;search&quot; class=&quot;form-control&quot; name=&quot;q&quot; placeholder=&quot;搜索&quot; required&amp;gt;
+    &amp;lt;/form&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;配置搜索请求url
+最后一步就是在mysite/urls.py中添加&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;urlpatterns = [
+path('search/', include('haystack.urls')),
+]
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;其中haystack.urls内容为：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;from django.conf.urls imposeart url
+from haystack.views import SearchView
+
+urlpatterns = [
+    url(r'^$', SearchView(), name='haystack_search'),
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;重建索引
+python3 manage.py rebuild_index
+重启服务器，浏览器访问 http://127.0.0.1:8000/search&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;自动更新索引
+当数据库内容变化，自动更新索引，在mysite/settings.py配置&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HAYSTACK_SIGNAL_PROCESSOR = 'haystack.signals.RealtimeSignalProcessor'
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;ul&gt;
+  &lt;li&gt;设置每页显示行数
+haystack自带分页功能，可以在mysite/settings.py配置每页显示行数&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HAYSTACK_SEARCH_RESULTS_PER_PAGE = 5
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;支持中文分词&lt;/p&gt;
+
+&lt;p&gt;搜索会发现，搜索英文单词能够搜到，但是中文搜不到，因为默认的whoosh分词对中文支持不够好，需要更换其分词库。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;实现中文分词引擎whoosh_cn_backend.py
+我们把源码whoosh_backend.py cp到polls目录下，改名为whoosh_cn_backend.py,修改如下：&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;引入ChineseAnalyzer
+from jieba.analyse import ChineseAnalyzer&lt;/p&gt;
+
+&lt;p&gt;将原来的analyzer=StemmingAnalyzer() 替换为analyzer=ChineseAnalyzer()&lt;/p&gt;
+
+&lt;p&gt;该源文件位于本地python 安装包下面，以mac系统为例，其路径为：&lt;/p&gt;
+
+&lt;p&gt;/Library/Frameworks/Python.framework/Versions/3.6/lib/python3.6/site-packages/haystack/backends/whoosh_backend.py&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;配置分词引擎&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;将mysite/settings.py中 ENGINE 修改为 ‘polls.whoosh_cn_backend.WhooshEngine’&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;HAYSTACK_CONNECTIONS = {
+    'default': {
+        #'ENGINE': 'haystack.backends.whoosh_backend.WhooshEngine',
+        'ENGINE': 'polls.whoosh_cn_backend.WhooshEngine',
+        'PATH': os.path.join(os.path.dirname(__file__), 'whoosh_index'),
+    },
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;重建索引
+python3 manage.py rebuild_index&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;展示样式调整
+haystack提供了很多展示标签，常用的如高亮展示 highlight，设置段落展示最大长度  max_length 等，使用方法如下：&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;{ highlight result.object.content with query max_length 300 }
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;最后感受下搜索效果&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/django-search.png&quot; alt=&quot;搜索效果&quot; /&gt;&lt;/p&gt;
+
+&lt;h4 id=&quot;系统环境&quot;&gt;系统环境&lt;/h4&gt;
+
+&lt;p&gt;pip3 freeze &amp;gt;requirements.txt看下主要依赖包版本：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;#python==3.6.6
+Django==2.1.1
+django-bootstrap3==11.0.0
+django-haystack==2.8.1
+DjangoUeditor==1.8.143
+jieba==0.39
+Pillow==5.2.0
+pyquery==1.4.0
+python-dateutil==2.7.3
+Whoosh==2.7.4
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;深入了解django&quot;&gt;深入了解Django：&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Django官网&lt;/li&gt;
+  &lt;li&gt;Python Web开发最难懂的WSGI协议，到底包含哪些内容？&lt;/li&gt;
+&lt;/ul&gt;</content><author><name>cangqing</name></author><summary type="html">Django是一个python语言实现的、MVC架构模式的开源web框架。Django以其优雅和简约使web应用开发变得极其容易。本文作者也是被其设计理念所折服，于是立马书写一篇，为Django的开源推广助一臂之力。在此，本文以如何搭建网站搜索为例，带领大家领略一下其魅力。</summary></entry><entry><title type="html">通过邮件发送图片模板</title><link href="http://localhost:4000/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF.html" rel="alternate" type="text/html" title="通过邮件发送图片模板" /><published>2018-11-23T00:00:00+08:00</published><updated>2018-11-23T00:00:00+08:00</updated><id>http://localhost:4000/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF</id><content type="html" xml:base="http://localhost:4000/2018/11/23/%E9%80%9A%E8%BF%87%E9%82%AE%E4%BB%B6%E5%8F%91%E9%80%81%E5%9B%BE%E7%89%87%E6%A8%A1%E6%9D%BF.html">&lt;p&gt;有一种场景需要程序通过邮件发送模板申请表。通常的做法是维护一个html模板，然后通过模板引擎渲染最终结果发送。这种方式虽然也可行，但是不够直观。本文介绍另一种方式：基于图片模板渲染！&lt;/p&gt;
 
 &lt;p&gt;大致效果是酱紫的：
 &lt;a href=&quot;/assets/images/img_rendered.jpeg&quot;&gt;效果图&lt;/a&gt;&lt;/p&gt;
@@ -127,7 +439,7 @@
 &lt;/ol&gt;
 
 &lt;h4 id=&quot;reference&quot;&gt;Reference&lt;/h4&gt;
-&lt;p&gt;&lt;a href=&quot;http://blog.didispace.com/springbootmailsender/&quot;&gt;Spring Boot中使用JavaMailSender发送邮件&lt;/a&gt;&lt;/p&gt;</content><author><name>cangqing</name></author><summary type="html">有一种场景需要程序通过邮件发送模板申请表。通常的做法是维护一个html模板，然后通过模板引擎渲染最终结果发送。这种方式虽然也可行，但是不够直观。本文介绍另一种方式：基于图片模板渲染！</summary></entry><entry><title type="html">如何通过sql解析的方式维护任务依赖关系？</title><link href="/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB.html" rel="alternate" type="text/html" title="如何通过sql解析的方式维护任务依赖关系？" /><published>2018-11-08T00:00:00+08:00</published><updated>2018-11-08T00:00:00+08:00</updated><id>/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB%3F</id><content type="html" xml:base="/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB.html">&lt;h4 id=&quot;问题描述&quot;&gt;问题描述：&lt;/h4&gt;
+&lt;p&gt;&lt;a href=&quot;http://blog.didispace.com/springbootmailsender/&quot;&gt;Spring Boot中使用JavaMailSender发送邮件&lt;/a&gt;&lt;/p&gt;</content><author><name>cangqing</name></author><summary type="html">有一种场景需要程序通过邮件发送模板申请表。通常的做法是维护一个html模板，然后通过模板引擎渲染最终结果发送。这种方式虽然也可行，但是不够直观。本文介绍另一种方式：基于图片模板渲染！</summary></entry><entry><title type="html">如何通过sql解析的方式维护任务依赖关系？</title><link href="http://localhost:4000/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB.html" rel="alternate" type="text/html" title="如何通过sql解析的方式维护任务依赖关系？" /><published>2018-11-08T00:00:00+08:00</published><updated>2018-11-08T00:00:00+08:00</updated><id>http://localhost:4000/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB%3F</id><content type="html" xml:base="http://localhost:4000/2018/11/08/%E5%A6%82%E4%BD%95%E9%80%9A%E8%BF%87sql%E8%A7%A3%E6%9E%90%E7%9A%84%E6%96%B9%E5%BC%8F%E7%BB%B4%E6%8A%A4%E4%BB%BB%E5%8A%A1%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB.html">&lt;h4 id=&quot;问题描述&quot;&gt;问题描述：&lt;/h4&gt;
 &lt;p&gt;调度系统中常见的任务类型是hive sql，spark sql等，这些任务根据sql 的输入和输出表自发的建立起一套先后次序，自然任务之间也就有了依赖关系。本文描述在系统设计中如何维护这些依赖关系：&lt;/p&gt;
 &lt;ul&gt;
   &lt;li&gt;如何存储依赖关系？&lt;/li&gt;
@@ -461,7 +773,7 @@ C[102]--&amp;gt;B(101)
 D[103]--&amp;gt;C(102)
 &lt;/div&gt;
 
-&lt;p&gt;关于有向无环图（DAG）的环检测算法可以通过图的深度遍历实现，有兴趣&lt;a href=&quot;https://algs4.cs.princeton.edu/42digraph/&quot;&gt;参考&lt;/a&gt;。&lt;/p&gt;</content><author><name>cangqing</name></author><summary type="html">问题描述： 调度系统中常见的任务类型是hive sql，spark sql等，这些任务根据sql 的输入和输出表自发的建立起一套先后次序，自然任务之间也就有了依赖关系。本文描述在系统设计中如何维护这些依赖关系： 如何存储依赖关系？ 如何维护依赖关系？ 如何进行环检测？</summary></entry><entry><title type="html">用swagger生成api接口文档</title><link href="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html" rel="alternate" type="text/html" title="用swagger生成api接口文档" /><published>2018-09-19T00:00:00+08:00</published><updated>2018-09-19T00:00:00+08:00</updated><id>/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3</id><content type="html" xml:base="/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html">&lt;h4 id=&quot;导读&quot;&gt;导读&lt;/h4&gt;
+&lt;p&gt;关于有向无环图（DAG）的环检测算法可以通过图的深度遍历实现，有兴趣&lt;a href=&quot;https://algs4.cs.princeton.edu/42digraph/&quot;&gt;参考&lt;/a&gt;。&lt;/p&gt;</content><author><name>cangqing</name></author><summary type="html">问题描述： 调度系统中常见的任务类型是hive sql，spark sql等，这些任务根据sql 的输入和输出表自发的建立起一套先后次序，自然任务之间也就有了依赖关系。本文描述在系统设计中如何维护这些依赖关系： 如何存储依赖关系？ 如何维护依赖关系？ 如何进行环检测？</summary></entry><entry><title type="html">用swagger生成api接口文档</title><link href="http://localhost:4000/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html" rel="alternate" type="text/html" title="用swagger生成api接口文档" /><published>2018-09-19T00:00:00+08:00</published><updated>2018-09-19T00:00:00+08:00</updated><id>http://localhost:4000/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3</id><content type="html" xml:base="http://localhost:4000/2018/09/19/%E7%94%A8swagger%E7%94%9F%E6%88%90API%E6%8E%A5%E5%8F%A3%E6%96%87%E6%A1%A3.html">&lt;h4 id=&quot;导读&quot;&gt;导读&lt;/h4&gt;
 
 &lt;p&gt;swagger是一个API框架，号称世界上最流行的API工具。它提供了API管理的全套解决方案，比如API在线编辑器，API UI展示界面，代码生成器等诸多功能。&lt;/p&gt;
 
@@ -724,7 +1036,7 @@ public class SwaggerConfig {
 
 &lt;p&gt;https://www.jianshu.com/p/ecb8daa4ecf7&lt;/p&gt;
 
-&lt;p&gt;https://leongfeng.github.io/2017/02/20/springboot-springfox-swagger2markup-spring-restdoc&lt;/p&gt;</content><author><name></name></author><summary type="html">导读</summary></entry><entry><title type="html">如何优雅的请求http</title><link href="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html" rel="alternate" type="text/html" title="如何优雅的请求http" /><published>2018-09-07T00:00:00+08:00</published><updated>2018-09-07T00:00:00+08:00</updated><id>/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP</id><content type="html" xml:base="/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html">&lt;p&gt;提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。&lt;/p&gt;
+&lt;p&gt;https://leongfeng.github.io/2017/02/20/springboot-springfox-swagger2markup-spring-restdoc&lt;/p&gt;</content><author><name></name></author><summary type="html">导读</summary></entry><entry><title type="html">如何优雅的请求http</title><link href="http://localhost:4000/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html" rel="alternate" type="text/html" title="如何优雅的请求http" /><published>2018-09-07T00:00:00+08:00</published><updated>2018-09-07T00:00:00+08:00</updated><id>http://localhost:4000/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP</id><content type="html" xml:base="http://localhost:4000/2018/09/07/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E8%AF%B7%E6%B1%82HTTP.html">&lt;p&gt;提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。&lt;/p&gt;
 
 &lt;p&gt;需求描述：比如在调度系统里的一个Hive Sql任务完成后通常会产出一个Hive表，但是这个表要被下游很多其他任务读取，此时需要保证上游任务的结果正确性。为此另一个系统提供验证的http服务，调用方调用http服务获取校验结果。要求如果校验失败，则报警，这个过程直到该问题解决。从业务方和产品方来看这个需求很简单，仿佛是随口而出，但是在工程师看来，这个需求实现起来相当操蛋，且听操蛋君分析在这个过程中需要考虑哪些问题：&lt;/p&gt;
 &lt;ol&gt;
@@ -995,7 +1307,7 @@ return checkPass;
             throw new IOException(e);
         }
     }
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name></name></author><summary type="html">提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。</summary></entry><entry><title type="html">谈谈代码自动生成</title><link href="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html" rel="alternate" type="text/html" title="谈谈代码自动生成" /><published>2018-08-22T00:00:00+08:00</published><updated>2018-08-22T00:00:00+08:00</updated><id>/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90</id><content type="html" xml:base="/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html">&lt;h4 id=&quot;由lombok说开去&quot;&gt;由Lombok说开去&lt;/h4&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;</content><author><name></name></author><summary type="html">提到请求http，自然避免不了各种异常，如：网络不通，调用超时，请求中断，返回结果异常等。业务处理中通常要考虑http请求的各种异常情况，如果处理不当，一个简单的http请求可能让原本不太复杂的业务逻辑变得更加复杂，难以维护。本文以一个案例描述如何借用一些工具包让这个过程变得可控。</summary></entry><entry><title type="html">谈谈代码自动生成</title><link href="http://localhost:4000/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html" rel="alternate" type="text/html" title="谈谈代码自动生成" /><published>2018-08-22T00:00:00+08:00</published><updated>2018-08-22T00:00:00+08:00</updated><id>http://localhost:4000/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90</id><content type="html" xml:base="http://localhost:4000/2018/08/22/%E8%B0%88%E8%B0%88%E4%BB%A3%E7%A0%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90.html">&lt;h4 id=&quot;由lombok说开去&quot;&gt;由Lombok说开去&lt;/h4&gt;
 &lt;p&gt;众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。&lt;/p&gt;
 
 &lt;p&gt;本文不打算深入讲解Lombok的详细用法，仅做入门展示特性。&lt;/p&gt;
@@ -1391,13 +1703,13 @@ javapoet里面常用的几个类：&lt;/p&gt;
 &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;p&gt;好了，poet的内容实在太多，师父领进门，修行靠个人，点到为止，更多内容戳&lt;a href=&quot;https://github.com/square/javapoet&quot;&gt;»&amp;gt;&lt;/a&gt;。
-到此，文章是写完了，但是思考还木有停止：技术的发展是让程序员少写或者不写代码，jdk和众多第三方库花了很大的力气也是在朝着这个方向努力，在上面的例子我们也看到了这个结果，但是并没有承诺让程序员少看代码。这不得不让人怀疑他们努力的方向。可能是机器真的需要人来监督。&lt;/p&gt;</content><author><name></name></author><summary type="html">由Lombok说开去 众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。</summary></entry><entry><title type="html">Apples</title><link href="/2018/08/21/apples.html" rel="alternate" type="text/html" title="Apples" /><published>2018-08-21T00:00:00+08:00</published><updated>2018-08-21T00:00:00+08:00</updated><id>/2018/08/21/apples</id><content type="html" xml:base="/2018/08/21/apples.html">&lt;p&gt;An apple is a sweet, edible fruit produced by an apple tree.&lt;/p&gt;
+到此，文章是写完了，但是思考还木有停止：技术的发展是让程序员少写或者不写代码，jdk和众多第三方库花了很大的力气也是在朝着这个方向努力，在上面的例子我们也看到了这个结果，但是并没有承诺让程序员少看代码。这不得不让人怀疑他们努力的方向。可能是机器真的需要人来监督。&lt;/p&gt;</content><author><name></name></author><summary type="html">由Lombok说开去 众所周知，java的代码冗长一直为人诟病，且不说java bean大量的setter和getter方法，就源文件中大量的sychronized，try…catch…finally异常处理代码就能分散开发人员的注意力，那除了规范编码风格，比如抽离方法体之外还有没有更好的办法解决这个问题呢？本文提到的Lombok就是一种，该框架基本思想就是通过一些奇技淫巧在编译期间就能通过一些代码标注影响最终生成的目标class类文件。虽然他也有一些问题，下文陆续提到。直接的就是可读性问题，比如在IDE上面显示语法错误飘红提示，但是编译又能通过，影响心情至于有些评论认为这是一种低级趣味的插件，暂且不做评论，先做了解再看。</summary></entry><entry><title type="html">Apples</title><link href="http://localhost:4000/2018/08/21/apples.html" rel="alternate" type="text/html" title="Apples" /><published>2018-08-21T00:00:00+08:00</published><updated>2018-08-21T00:00:00+08:00</updated><id>http://localhost:4000/2018/08/21/apples</id><content type="html" xml:base="http://localhost:4000/2018/08/21/apples.html">&lt;p&gt;An apple is a sweet, edible fruit produced by an apple tree.&lt;/p&gt;
 
 &lt;p&gt;Apple trees are cultivated worldwide, and are the most widely grown species in
 the genus Malus. The tree originated in Central Asia, where its wild ancestor,
 Malus sieversii, is still found today. Apples have been grown for thousands of
 years in Asia and Europe, and were brought to North America by European
-colonists.&lt;/p&gt;</content><author><name>jill</name></author><summary type="html">An apple is a sweet, edible fruit produced by an apple tree.</summary></entry><entry><title type="html">Bananas</title><link href="/2018/08/20/bananas.html" rel="alternate" type="text/html" title="Bananas" /><published>2018-08-20T00:00:00+08:00</published><updated>2018-08-20T00:00:00+08:00</updated><id>/2018/08/20/bananas</id><content type="html" xml:base="/2018/08/20/bananas.html">&lt;p&gt;A banana is an edible fruit – botanically a berry – produced by several kinds
+colonists.&lt;/p&gt;</content><author><name>jill</name></author><summary type="html">An apple is a sweet, edible fruit produced by an apple tree.</summary></entry><entry><title type="html">Bananas</title><link href="http://localhost:4000/2018/08/20/bananas.html" rel="alternate" type="text/html" title="Bananas" /><published>2018-08-20T00:00:00+08:00</published><updated>2018-08-20T00:00:00+08:00</updated><id>http://localhost:4000/2018/08/20/bananas</id><content type="html" xml:base="http://localhost:4000/2018/08/20/bananas.html">&lt;p&gt;A banana is an edible fruit – botanically a berry – produced by several kinds
 of large herbaceous flowering plants in the genus Musa.&lt;/p&gt;
 
 &lt;p&gt;In some countries, bananas used for cooking may be called “plantains”,
